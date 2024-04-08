@@ -1,10 +1,16 @@
-﻿namespace AlfenHub
-{
-    internal class Program
+﻿using AlfenHub;
+using AlfenHub.Alfen.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
+var host = Host.CreateDefaultBuilder(args)
+    .ConfigureServices((hostContext, services) =>
     {
-        public static void Main()
-        {
-            Console.WriteLine("Hello, World!");
-        }
-    }
-}
+        var configuration = hostContext.Configuration;
+        services.AddHostedService<Worker>();
+        services.AddAlfen(configuration);
+        services.AddMediatR(m => m.RegisterServicesFromAssembly(typeof(Program).Assembly));
+    })
+    .Build();
+
+await host.RunAsync();
