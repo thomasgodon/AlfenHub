@@ -40,23 +40,29 @@ internal partial class AlfenModbusClient : IAlfenModbusClient
             // Keep this task alive until it is cancelled
             while (cancellationToken.IsCancellationRequested is false)
             {
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+
                 if (_modbusClient.IsConnected is false)
                 {
-                    _modbusClient.Connect(endPoint, ModbusEndianness.BigEndian);
-
-                    if (_modbusClient.IsConnected)
+                    try
                     {
-                        _logger.LogInformation("Connected to {host} at port: {port}", endPoint.Address, endPoint.Port);
+                        _modbusClient.Connect(endPoint, ModbusEndianness.BigEndian);
+
+                        if (_modbusClient.IsConnected)
+                        {
+                            _logger.LogInformation("Connected to {host} at port: {port}", endPoint.Address, endPoint.Port);
+                        }
+                        else
+                        {
+                            throw new Exception();
+                        }
                     }
-                    else
+                    catch (Exception)
                     {
                         _logger.LogError("Something went wrong when trying to connect to {host} at port: {port}", endPoint.Address, endPoint.Port);
+                        continue;
                     }
-
-                    continue;
                 }
-
-                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
 
                 try
                 {
