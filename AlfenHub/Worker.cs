@@ -5,9 +5,9 @@ namespace AlfenHub;
 
 internal class Worker : BackgroundService
 {
-    private readonly IAlfenModbusServer _alfenModbusServer;
+    private readonly IAlfenModbusClient _alfenModbusServer;
 
-    public Worker(IAlfenModbusServer alfenModbusServer)
+    public Worker(IAlfenModbusClient alfenModbusServer)
     {
         _alfenModbusServer = alfenModbusServer;
     }

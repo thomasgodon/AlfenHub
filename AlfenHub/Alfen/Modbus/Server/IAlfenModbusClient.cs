@@ -1,6 +1,6 @@
 ﻿namespace AlfenHub.Alfen.Modbus.Server;
 
-internal interface IAlfenModbusServer
+internal interface IAlfenModbusClient
 {
     Task Start(CancellationToken cancellationToken);
 }

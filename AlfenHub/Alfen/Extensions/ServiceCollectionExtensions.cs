@@ -17,7 +17,7 @@ namespace AlfenHub.Alfen.Extensions
         private static void AddModbusServer(this IServiceCollection serviceCollection, IConfiguration configuration)
         {
             serviceCollection.Configure<AlfenModbusOptions>(configuration.GetSection(nameof(AlfenModbusOptions)));
-            serviceCollection.AddSingleton<IAlfenModbusServer, AlfenModbusServer>();
+            serviceCollection.AddSingleton<IAlfenModbusClient, AlfenModbusClient>();
         }
     }
 }
