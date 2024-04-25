@@ -12,8 +12,8 @@ internal class Worker : BackgroundService
         _alfenModbusServer = alfenModbusServer;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await _alfenModbusServer.Start(cancellationToken);
+        await _alfenModbusServer.Start(stoppingToken);
     }
 }

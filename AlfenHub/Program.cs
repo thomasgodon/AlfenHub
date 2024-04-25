@@ -1,16 +1,53 @@
 ﻿using AlfenHub;
 using AlfenHub.Alfen.Extensions;
+using AlfenHub.Alfen.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
-var host = Host.CreateDefaultBuilder(args)
-    .ConfigureServices((hostContext, services) =>
+var builder = Host.CreateApplicationBuilder(args);
+builder.Services
+    .AddHostedService<Worker>()
+    .AddMediatR(m => m.RegisterServicesFromAssembly(typeof(Program).Assembly))
+    .AddAlfen(builder.Configuration)
+    .AddOpenTelemetry()
+
+    .ConfigureResource(resourceBuilder => resourceBuilder.AddService(nameof(AlfenHub))
+        .AddAttributes([
+            new KeyValuePair<string, object>("Environment", builder.Environment.EnvironmentName),
+            new KeyValuePair<string, object>("Application", nameof(AlfenHub)),
+            new KeyValuePair<string, object>("Version", "1.0.0")
+        ]))
+    .WithTracing(tracing =>
     {
-        var configuration = hostContext.Configuration;
-        services.AddHostedService<Worker>();
-        services.AddAlfen(configuration);
-        services.AddMediatR(m => m.RegisterServicesFromAssembly(typeof(Program).Assembly));
+        tracing
+            .AddSource(DiagnosticsConfig.ActivitySource.Name)
+            .AddOtlpExporter(exporterOptions => { exporterOptions.Endpoint = new Uri("http://localhost:4317"); });
     })
-    .Build();
+    .WithMetrics(metrics =>
+    {
+        metrics
+            .AddMeter()
+            .AddOtlpExporter();
+    });
+
+builder.Logging
+    .AddOpenTelemetry(loggingOptions =>
+    {
+        var resourceBuilder = ResourceBuilder.CreateDefault()
+            .AddService(nameof(AlfenHub)).AddAttributes([
+                new KeyValuePair<string, object>("Environment", builder.Environment.EnvironmentName)
+            ]);
+        loggingOptions.SetResourceBuilder(resourceBuilder);
+
+        loggingOptions
+            .AddOtlpExporter(exporterOptions => { exporterOptions.Endpoint = new Uri("http://localhost:4317"); });
+    });
+
+var host = builder.Build();
 
 await host.RunAsync();

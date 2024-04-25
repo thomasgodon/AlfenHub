@@ -1,4 +1,6 @@
-﻿using System.Net.Sockets;
+﻿using System.Diagnostics;
+using System.Net.Sockets;
+using AlfenHub.Alfen.Logging;
 using AlfenHub.Alfen.Models;
 
 namespace AlfenHub.Alfen.Modbus.Server;
@@ -13,6 +15,8 @@ internal partial class AlfenModbusClient
 
     private async Task<AlfenData> GetAlfenModbusData(CancellationToken cancellationToken)
     {
+        using var sampleActivity = DiagnosticsConfig.ActivitySource.StartActivity(nameof(GetAlfenModbusData), ActivityKind.Client);
+
         var sockets = await GetTotalSocketsAsync(cancellationToken);
         var data = new AlfenData
         {
@@ -36,12 +40,13 @@ internal partial class AlfenModbusClient
                 RealPowerPhaseL3 = sockets >= Socket2 ? await GetSocketRealPowerPhaseL3Async(Socket2, cancellationToken) : 0,
             }
         };
-
         return data;
     }
 
     private async Task<float> GetStationActiveMaxCurrentAsync(CancellationToken cancellationToken)
     {
+        using var sampleActivity = DiagnosticsConfig.ActivitySource.StartActivity(nameof(GetStationActiveMaxCurrentAsync), ActivityKind.Client);
+
         const ushort startingAddress = 1100;
         const ushort count = 2;
         var data = await _modbusClient.ReadHoldingRegistersAsync<ushort>(StationIdentifier, startingAddress, count, cancellationToken);
@@ -50,6 +55,8 @@ internal partial class AlfenModbusClient
 
     private async Task<float> GetTemperatureAsync(CancellationToken cancellationToken)
     {
+        using var sampleActivity = DiagnosticsConfig.ActivitySource.StartActivity(nameof(GetTemperatureAsync), ActivityKind.Client);
+
         const ushort startingAddress = 1102;
         const ushort count = 2;
         var data = await _modbusClient.ReadHoldingRegistersAsync<ushort>(StationIdentifier, startingAddress, count, cancellationToken);
@@ -58,6 +65,8 @@ internal partial class AlfenModbusClient
 
     private async Task<ushort> GetTotalSocketsAsync(CancellationToken cancellationToken)
     {
+        using var sampleActivity = DiagnosticsConfig.ActivitySource.StartActivity(nameof(GetTotalSocketsAsync), ActivityKind.Client);
+
         const ushort startingAddress = 1105;
         const ushort count = 1;
         var data = await _modbusClient.ReadHoldingRegistersAsync<ushort>(StationIdentifier, startingAddress, count, cancellationToken);
@@ -66,6 +75,8 @@ internal partial class AlfenModbusClient
 
     private async Task<float> GetSocketFrequencyAsync(ushort socket, CancellationToken cancellationToken)
     {
+        using var sampleActivity = DiagnosticsConfig.ActivitySource.StartActivity(nameof(GetSocketFrequencyAsync), ActivityKind.Client);
+
         const ushort startingAddress = 336;
         const ushort count = 2;
         var data = await _modbusClient.ReadHoldingRegistersAsync<ushort>(socket, startingAddress, count, cancellationToken);
@@ -74,6 +85,8 @@ internal partial class AlfenModbusClient
 
     private async Task<float> GetSocketRealPowerPhaseL1Async(ushort socket, CancellationToken cancellationToken)
     {
+        using var sampleActivity = DiagnosticsConfig.ActivitySource.StartActivity(nameof(GetSocketRealPowerPhaseL1Async), ActivityKind.Client);
+
         const ushort startingAddress = 338;
         const ushort count = 2;
         var data = await _modbusClient.ReadHoldingRegistersAsync<ushort>(socket, startingAddress, count, cancellationToken);
@@ -82,6 +95,8 @@ internal partial class AlfenModbusClient
 
     private async Task<float> GetSocketRealPowerPhaseL2Async(ushort socket, CancellationToken cancellationToken)
     {
+        using var sampleActivity = DiagnosticsConfig.ActivitySource.StartActivity(nameof(GetSocketRealPowerPhaseL2Async), ActivityKind.Client);
+
         const ushort startingAddress = 340;
         const ushort count = 2;
         var data = await _modbusClient.ReadHoldingRegistersAsync<ushort>(socket, startingAddress, count, cancellationToken);
@@ -90,6 +105,8 @@ internal partial class AlfenModbusClient
 
     private async Task<float> GetSocketRealPowerPhaseL3Async(ushort socket, CancellationToken cancellationToken)
     {
+        using var sampleActivity = DiagnosticsConfig.ActivitySource.StartActivity(nameof(GetSocketRealPowerPhaseL3Async), ActivityKind.Client);
+
         const ushort startingAddress = 342;
         const ushort count = 2;
         var data = await _modbusClient.ReadHoldingRegistersAsync<ushort>(socket, startingAddress, count, cancellationToken);
@@ -98,6 +115,8 @@ internal partial class AlfenModbusClient
 
     private async Task<float> GetSocketModbusSlaveMaxCurrentAsync(ushort socket, CancellationToken cancellationToken)
     {
+        using var sampleActivity = DiagnosticsConfig.ActivitySource.StartActivity(nameof(GetSocketModbusSlaveMaxCurrentAsync), ActivityKind.Client);
+
         const ushort startingAddress = 1210;
         const ushort count = 2;
         var data = await _modbusClient.ReadHoldingRegistersAsync<ushort>(socket, startingAddress, count, cancellationToken);
