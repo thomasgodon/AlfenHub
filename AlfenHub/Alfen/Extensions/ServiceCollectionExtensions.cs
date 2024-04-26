@@ -19,5 +19,10 @@ namespace AlfenHub.Alfen.Extensions
             serviceCollection.Configure<AlfenModbusOptions>(configuration.GetSection(nameof(AlfenModbusOptions)));
             serviceCollection.AddSingleton<IAlfenModbusClient, AlfenModbusClient>();
         }
+
+        public static IServiceCollection AddOpenTelemetryOption(this IServiceCollection serviceCollection, IConfiguration configuration)
+        {
+
+        }
     }
 }

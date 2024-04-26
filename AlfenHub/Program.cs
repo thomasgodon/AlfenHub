@@ -14,13 +14,13 @@ builder.Services
     .AddHostedService<Worker>()
     .AddMediatR(m => m.RegisterServicesFromAssembly(typeof(Program).Assembly))
     .AddAlfen(builder.Configuration)
+    .Configure()
     .AddOpenTelemetry()
 
     .ConfigureResource(resourceBuilder => resourceBuilder.AddService(nameof(AlfenHub))
         .AddAttributes([
             new KeyValuePair<string, object>("Environment", builder.Environment.EnvironmentName),
-            new KeyValuePair<string, object>("Application", nameof(AlfenHub)),
-            new KeyValuePair<string, object>("Version", "1.0.0")
+            new KeyValuePair<string, object>("Application", nameof(AlfenHub))
         ]))
     .WithTracing(tracing =>
     {
