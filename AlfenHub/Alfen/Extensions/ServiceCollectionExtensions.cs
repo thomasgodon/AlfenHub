@@ -22,7 +22,7 @@ namespace AlfenHub.Alfen.Extensions
 
         public static IServiceCollection AddOpenTelemetryOption(this IServiceCollection serviceCollection, IConfiguration configuration)
         {
-
+            serviceCollection.Configure<opentel>()
         }
     }
 }
