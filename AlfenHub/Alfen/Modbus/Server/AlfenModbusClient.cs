@@ -38,11 +38,11 @@ internal partial class AlfenModbusClient : IAlfenModbusClient
         await Task.Run(async () =>
         {
             // Keep this task alive until it is cancelled
-            while (cancellationToken.IsCancellationRequested is false)
+            while (cancellationToken.IsCancellationRequested == false)
             {
                 await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
 
-                if (_modbusClient.IsConnected is false)
+                if (_modbusClient.IsConnected == false)
                 {
                     try
                     {
@@ -50,16 +50,12 @@ internal partial class AlfenModbusClient : IAlfenModbusClient
 
                         if (_modbusClient.IsConnected)
                         {
-                            _logger.LogInformation("Connected to {host} at port: {port}", endPoint.Address, endPoint.Port);
-                        }
-                        else
-                        {
-                            throw new Exception();
+                            _logger.LogInformation("Connected to {Host} at port: {Port}", endPoint.Address, endPoint.Port);
                         }
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
-                        _logger.LogError("Something went wrong when trying to connect to {host} at port: {port}", endPoint.Address, endPoint.Port);
+                        _logger.LogError(e, "Something went wrong when trying to connect to {Host} at port: {Port}", endPoint.Address, endPoint.Port);
                         continue;
                     }
                 }
@@ -67,14 +63,14 @@ internal partial class AlfenModbusClient : IAlfenModbusClient
                 try
                 {
                     _lastReceivedData = await GetAlfenModbusData(cancellationToken);
-                    _logger.LogTrace("{message}", JsonSerializer.Serialize(_lastReceivedData));
+                    _logger.LogTrace("{Message}", JsonSerializer.Serialize(_lastReceivedData));
 
                     // notify new alfen data has arrived
                     await _publisher.Publish(new AlfenDataArrivedNotification(_lastReceivedData), cancellationToken);
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError(e, "{message}", e.Message);
+                    _logger.LogError(e, "{Message}", e.Message);
                 }
             }
         }, cancellationToken);
