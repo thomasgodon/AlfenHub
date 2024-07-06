@@ -2,9 +2,19 @@
 
 internal static class ExtensionMethods
 {
-    public static ushort[] GetSection(this ushort[] input, int start, int length)
+    public static ushort[] GetSection(this ushort[] input, int startAddress, int endAddress, int registerStartAddress, int registerEndAddress)
     {
+        var sectionLength = endAddress - startAddress + 1;
+        if (sectionLength < 1)
+        {
+            throw new ArgumentException("Start address must be lower than the end address");
+        }
 
+        var sectionStart = startAddress - registerStartAddress;
+        var section = new ushort[sectionLength + 1];
+        Buffer.BlockCopy(input, sectionStart * 2, section, 0, sectionLength);
+
+        return section;
     }
 
     public static float ToFloat(this ushort[] data)
