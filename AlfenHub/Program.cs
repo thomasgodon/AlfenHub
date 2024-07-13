@@ -1,15 +1,19 @@
 ﻿using AlfenHub;
 using AlfenHub.Alfen.Extensions;
+using AlfenHub.Knx.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-var host = Host.CreateDefaultBuilder(args)
+var host = Host
+    .CreateDefaultBuilder(args)
     .ConfigureServices((hostContext, services) =>
     {
         var configuration = hostContext.Configuration;
-        services.AddHostedService<Worker>();
-        services.AddAlfen(configuration);
-        services.AddMediatR(m => m.RegisterServicesFromAssembly(typeof(Program).Assembly));
+        services
+            .AddHostedService<Worker>()
+            .AddAlfen(configuration)
+            .AddKnx(configuration)
+            .AddMediatR(m => m.RegisterServicesFromAssembly(typeof(Program).Assembly));
     })
     .Build();
 
