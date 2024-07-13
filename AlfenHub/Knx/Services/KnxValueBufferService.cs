@@ -65,8 +65,10 @@ namespace AlfenHub.Knx.Services
 
         private IEnumerable<KnxValue?> UpdateValues(AlfenData alfenData)
         {
-            // CurrentPhaseL1 - 14.056 power
-            yield return UpdateValue(nameof(AlfenData.Socket1.EnergyMeasurements.CurrentPhaseL1), BitConverter.GetBytes(alfenData.Socket1.EnergyMeasurements.CurrentPhaseL1));
+            // RealPowerSum - 14.056 power
+            yield return UpdateValue(
+                $"{nameof(AlfenData.Socket1)}.{nameof(AlfenData.Socket1.EnergyMeasurements.RealPowerSum)}",
+                BitConverter.GetBytes(alfenData.Socket1.EnergyMeasurements.RealPowerSum));
             
         }
     }

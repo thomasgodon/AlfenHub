@@ -55,7 +55,7 @@ namespace AlfenHub.Knx.Client
                         writeCancellationToken.Token),
                     Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken));
 
-                writeCancellationToken.Cancel();
+                await writeCancellationToken.CancelAsync();
             }
         }
 
@@ -74,11 +74,11 @@ namespace AlfenHub.Knx.Client
             await _bus.ConnectAsync(cancellationToken);
             if (_bus.ConnectionState == BusConnectionState.Connected)
             {
-                _logger.LogInformation("Connected to {host} at port: {port}", _options.Host, _options.Port);
+                _logger.LogInformation("Connected to {Host} at port: {Port}", _options.Host, _options.Port);
             }
             else
             {
-                _logger.LogError("Something went wrong when trying to connect to {host} at port: {port}", _options.Host, _options.Port);
+                _logger.LogError("Something went wrong when trying to connect to {Host} at port: {Port}", _options.Host, _options.Port);
             }
         }
 
@@ -110,7 +110,7 @@ namespace AlfenHub.Knx.Client
                     break;
                 
                 default:
-                    _logger.LogTrace("Message type'{type}' not implemented", e.EventType);
+                    _logger.LogTrace("Message type'{Type}' not implemented", e.EventType);
                         break;
             }
         }
