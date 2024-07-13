@@ -22,12 +22,12 @@ namespace AlfenHub.Knx.Requests.Handlers
 
         public Task<KnxValue?> Handle(KnxReadValueRequest request, CancellationToken cancellationToken)
         {
-            if (_readGroupAddressCapabilityMapping.TryGetValue(request.GroupAddress, out var capability) is false)
+            if (!_readGroupAddressCapabilityMapping.TryGetValue(request.GroupAddress, out var capability))
             {
                 return Task.FromResult<KnxValue?>(null);
             }
 
-            return _knxValueBufferService.GetKnxValues().TryGetValue(capability, out var knxValue) is false 
+            return !_knxValueBufferService.GetKnxValues().TryGetValue(capability, out var knxValue) 
                 ? Task.FromResult<KnxValue?>(null) 
                 : Task.FromResult<KnxValue?>(knxValue);
         }

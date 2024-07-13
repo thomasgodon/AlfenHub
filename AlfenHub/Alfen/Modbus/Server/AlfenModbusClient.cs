@@ -76,6 +76,20 @@ internal class AlfenModbusClient : IAlfenModbusClient
         }, cancellationToken);
     }
 
+    public Task SetSlaveMaxCurrentAsync(uint socket, float actualCurrent, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Task.CompletedTask;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Could not set slave max current for socket {Socket}", socket);
+        }
+
+        return Task.CompletedTask;
+    }
+
     private async Task<IPEndPoint> GetEndPointAsync(CancellationToken cancellationToken)
     {
         if (IPAddress.TryParse(_alfenModbusOptions.Host, out var parsedIp))
