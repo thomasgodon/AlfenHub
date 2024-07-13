@@ -31,12 +31,9 @@ namespace AlfenHub.Knx.Services
                 return null;
             }
 
-            if (knxAlfenValue.Value is not null)
+            if (knxAlfenValue.Value is not null && knxAlfenValue.Value.SequenceEqual(value))
             {
-                if (knxAlfenValue.Value.SequenceEqual(value))
-                {
-                    return null;
-                }
+                return null;
             }
 
             _capabilityKnxValueMapping[capability].Value = value;
@@ -69,7 +66,17 @@ namespace AlfenHub.Knx.Services
             yield return UpdateValue(
                 $"{nameof(AlfenData.Socket1)}.{nameof(AlfenData.Socket1.EnergyMeasurements.RealPowerSum)}",
                 BitConverter.GetBytes(alfenData.Socket1.EnergyMeasurements.RealPowerSum));
-            
+
+            // SlaveMaxCurrent - 14.019 electric current
+            yield return UpdateValue(
+                $"{nameof(AlfenData.Socket1)}.SlaveMaxCurrent",
+                BitConverter.GetBytes(alfenData.Socket1.StatusAndTransaction.ModbusSlaveMaxCurrent));
+
+            // ActualAppliedMaxCurrent - 14.019 electric current
+            yield return UpdateValue(
+                $"{nameof(AlfenData.Socket1)}.{nameof(AlfenData.Socket1.StatusAndTransaction.ActualAppliedMaxCurrent)}",
+                BitConverter.GetBytes(alfenData.Socket1.StatusAndTransaction.ActualAppliedMaxCurrent));
+
         }
     }
 }
