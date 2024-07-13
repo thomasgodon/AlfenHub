@@ -164,6 +164,7 @@ internal class AlfenModbusClient : IAlfenModbusClient
                 {
                     Availability = socket1StatusAndTransactionRegisters.GetSection(1200, 1200, AlfenModbusConstants.SocketStatusAndTransactionStartAddress, AlfenModbusConstants.SocketStatusAndTransactionEndAddress).ToUshort(),
                     ActualAppliedMaxCurrent = socket1StatusAndTransactionRegisters.GetSection(1206, 1207, AlfenModbusConstants.SocketStatusAndTransactionStartAddress, AlfenModbusConstants.SocketStatusAndTransactionEndAddress).ToFloat(),
+                    ModbusSlaveMaxCurrentValidTime = socket1StatusAndTransactionRegisters.GetSection(1208, 1209, AlfenModbusConstants.SocketStatusAndTransactionStartAddress, AlfenModbusConstants.SocketStatusAndTransactionEndAddress).ToTimespan(),
                     ModbusSlaveMaxCurrent = socket1StatusAndTransactionRegisters.GetSection(1208, 1209, AlfenModbusConstants.SocketStatusAndTransactionStartAddress, AlfenModbusConstants.SocketStatusAndTransactionEndAddress).ToFloat(),
                     ActiveLoadBalancingSafeCurrent = socket1StatusAndTransactionRegisters.GetSection(1212, 1213, AlfenModbusConstants.SocketStatusAndTransactionStartAddress, AlfenModbusConstants.SocketStatusAndTransactionEndAddress).ToFloat(),
                     ModbusSlaveReceivedSetPointAccountedFor = socket1StatusAndTransactionRegisters.GetSection(1214, 1214, AlfenModbusConstants.SocketStatusAndTransactionStartAddress, AlfenModbusConstants.SocketStatusAndTransactionEndAddress).ToUshort(),

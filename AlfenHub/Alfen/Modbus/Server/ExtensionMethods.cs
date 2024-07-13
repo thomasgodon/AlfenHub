@@ -30,4 +30,12 @@ internal static class ExtensionMethods
         var bytes = BitConverter.GetBytes(data.ToArray()[0]);
         return BitConverter.ToUInt16(bytes);
     }
+
+    public static TimeSpan ToTimespan(this ushort[] data)
+    {
+        var bytes = BitConverter.GetBytes(data.ToArray()[1])
+            .Concat(BitConverter.GetBytes(data.ToArray()[0])).ToArray();
+        var value = BitConverter.ToUInt32(bytes);
+        return TimeSpan.FromSeconds(value);
+    }
 }
