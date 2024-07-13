@@ -16,7 +16,6 @@ internal class AlfenModbusClient : IAlfenModbusClient
     private readonly IPublisher _publisher;
     private readonly AlfenModbusOptions _alfenModbusOptions;
     private readonly ModbusTcpClient _modbusClient;
-    private AlfenData? _lastReceivedData;
 
     public AlfenModbusClient(
         ILogger<AlfenModbusClient> logger,
@@ -32,17 +31,18 @@ internal class AlfenModbusClient : IAlfenModbusClient
 
     public async Task Start(CancellationToken cancellationToken)
     {
+        AlfenData? lastReceivedData;
         var endPoint = await GetEndPointAsync(cancellationToken);
         _modbusClient.ReadTimeout = 1000;
 
         await Task.Run(async () =>
         {
             // Keep this task alive until it is cancelled
-            while (cancellationToken.IsCancellationRequested == false)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
 
-                if (_modbusClient.IsConnected == false)
+                if (!_modbusClient.IsConnected)
                 {
                     try
                     {
@@ -62,11 +62,11 @@ internal class AlfenModbusClient : IAlfenModbusClient
 
                 try
                 {
-                    _lastReceivedData = await GetAlfenModbusData(cancellationToken);
-                    _logger.LogTrace("{Message}", JsonSerializer.Serialize(_lastReceivedData));
+                    lastReceivedData = await GetAlfenModbusData(cancellationToken);
+                    _logger.LogTrace("{Message}", JsonSerializer.Serialize(lastReceivedData));
 
                     // notify new alfen data has arrived
-                    await _publisher.Publish(new AlfenDataArrivedNotification(_lastReceivedData), cancellationToken);
+                    await _publisher.Publish(new AlfenDataArrivedNotification(lastReceivedData), cancellationToken);
                 }
                 catch (Exception e)
                 {
