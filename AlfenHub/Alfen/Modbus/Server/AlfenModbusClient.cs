@@ -29,6 +29,8 @@ internal class AlfenModbusClient : IAlfenModbusClient
         _modbusClient = new ModbusTcpClient();
     }
 
+    public IReadOnlyDictionary<int, AlfenSocketWritableData> SocketWritableData { get; private set; } = new Dictionary<int, AlfenSocketWritableData>();
+
     public async Task Start(CancellationToken cancellationToken)
     {
         AlfenData? lastReceivedData;
@@ -62,8 +64,15 @@ internal class AlfenModbusClient : IAlfenModbusClient
 
                 try
                 {
+                    // write values
+                    await WriteValuesAsync(cancellationToken);
+
+                    // read values
                     lastReceivedData = await GetAlfenModbusData(cancellationToken);
                     _logger.LogTrace("{Message}", JsonSerializer.Serialize(lastReceivedData));
+
+                    // initialize socket dictionary
+                    InitializeSocketDictionary(lastReceivedData);
 
                     // notify new alfen data has arrived
                     await _publisher.Publish(new AlfenDataArrivedNotification(lastReceivedData), cancellationToken);
@@ -76,18 +85,36 @@ internal class AlfenModbusClient : IAlfenModbusClient
         }, cancellationToken);
     }
 
-    public Task SetSlaveMaxCurrentAsync(uint socket, float actualCurrent, CancellationToken cancellationToken)
+    private async Task WriteValuesAsync(CancellationToken cancellationToken)
     {
-        try
+        foreach (var alfenSocketWritableData in SocketWritableData)
         {
-            return Task.CompletedTask;
+            // write Modbus Slave Max Current
+            if (alfenSocketWritableData.Value.ModbusSlaveMaxCurrent != null)
+            {
+                await _modbusClient.WriteMultipleRegistersAsync(
+                    unitIdentifier: alfenSocketWritableData.Key,
+                    startingAddress: 1210,
+                    dataset: alfenSocketWritableData.Value.ModbusSlaveMaxCurrent.Value.ToUshortArray(),
+                    cancellationToken);
+            }
         }
-        catch (Exception e)
+    }
+
+    private void InitializeSocketDictionary(AlfenData lastReceivedData)
+    {
+        if (lastReceivedData.TotalSockets == SocketWritableData.Count)
         {
-            _logger.LogError(e, "Could not set slave max current for socket {Socket}", socket);
+            return;
         }
 
-        return Task.CompletedTask;
+        var dictionary = new Dictionary<int, AlfenSocketWritableData>(SocketWritableData.Count);
+        for (var i = 1; i <= lastReceivedData.TotalSockets; i++)
+        {
+            dictionary.Add(i, new AlfenSocketWritableData());
+        }
+
+        SocketWritableData = dictionary;
     }
 
     private async Task<IPEndPoint> GetEndPointAsync(CancellationToken cancellationToken)

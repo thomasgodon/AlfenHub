@@ -24,21 +24,23 @@ namespace AlfenHub.Knx.Requests.Handlers
             _writeGroupAddressCapabilityMapping = BuildWriteGroupAddressCapabilityMapping(options.Value);
         }
 
-        public async Task Handle(KnxWriteValueRequest request, CancellationToken cancellationToken)
+        public Task Handle(KnxWriteValueRequest request, CancellationToken cancellationToken)
         {
             if (!_writeGroupAddressCapabilityMapping.TryGetValue(request.GroupAddress, out var capability))
             {
-                return;
+                return Task.CompletedTask;
             }
 
             try
             {
-                await ProcessCapabilityValue(capability, request.Value, cancellationToken);
+                ProcessCapabilityValue(capability, request.Value);
             }
             catch (Exception e)
             {
                 _logger.LogError(e, "{Message}", e.Message);
             }
+
+            return Task.CompletedTask;
         }
 
         private static Dictionary<GroupAddress, string> BuildWriteGroupAddressCapabilityMapping(KnxOptions options)
@@ -47,20 +49,23 @@ namespace AlfenHub.Knx.Requests.Handlers
                     groupAddressMapping => GroupAddress.Parse(groupAddressMapping.Value),
                     groupAddressMapping => groupAddressMapping.Key);
 
-        private Task ProcessCapabilityValue(string capability, byte[] value, CancellationToken cancellationToken)
+        private void ProcessCapabilityValue(string capability, byte[] value)
         {
             switch (capability)
             {
                 case "Socket1.SlaveMaxCurrent":
-                    _alfenModbusClient.SetSlaveMaxCurrentAsync(1, BitConverter.ToSingle(value.Reverse().ToArray()), cancellationToken);
+                    if (!_alfenModbusClient.SocketWritableData.TryGetValue(1, out var socketData))
+                    {
+                        _logger.LogWarning("Could not resolve socket 1 writable data");
+                        break;
+                    }
+                    socketData.ModbusSlaveMaxCurrent = BitConverter.ToSingle(value.Reverse().ToArray());
                     break;
 
                 default:
                     _logger.LogWarning("Writing parameter '{Parameter}' not implemented", capability);
                     break;
             }
-
-            return Task.CompletedTask;
         }
     }
 }

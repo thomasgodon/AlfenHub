@@ -25,6 +25,19 @@ internal static class ExtensionMethods
         return value is float.NaN ? 0f : value;
     }
 
+    public static ushort[] ToUshortArray(this float value)
+    {
+        // Convert the float to its byte representation
+        var bytes = BitConverter.GetBytes(value);
+
+        // Convert the byte array to two 16-bit registers
+        var registers = new ushort[2];
+        registers[0] = BitConverter.ToUInt16(bytes, 2);
+        registers[1] = BitConverter.ToUInt16(bytes, 0);
+
+        return registers;
+    }
+
     public static ushort ToUshort(this ushort[] data)
     {
         var bytes = BitConverter.GetBytes(data.ToArray()[0]);

@@ -1,7 +1,9 @@
-﻿namespace AlfenHub.Alfen.Modbus.Server;
+﻿using AlfenHub.Alfen.Models;
+
+namespace AlfenHub.Alfen.Modbus.Server;
 
 internal interface IAlfenModbusClient
 {
+    IReadOnlyDictionary<int, AlfenSocketWritableData> SocketWritableData { get; }
     Task Start(CancellationToken cancellationToken);
-    Task SetSlaveMaxCurrentAsync(uint socket, float actualCurrent, CancellationToken cancellationToken);
 }
