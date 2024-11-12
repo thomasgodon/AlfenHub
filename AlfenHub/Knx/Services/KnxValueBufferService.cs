@@ -64,7 +64,7 @@ namespace AlfenHub.Knx.Services
         {
             yield return UpdateValue(
                 $"{nameof(AlfenData.Socket1)}.{nameof(AlfenData.Socket1.EnergyMeasurements.MeterState)}",
-                BitConverter.GetBytes(alfenData.Socket1.EnergyMeasurements.MeterState));
+                new [] {(byte)Convert.ToSByte((int)alfenData.Socket1.EnergyMeasurements.MeterState)});
 
             yield return UpdateValue(
                 $"{nameof(AlfenData.Socket1)}.{nameof(AlfenData.Socket1.EnergyMeasurements.CurrentSum)}",
@@ -101,6 +101,10 @@ namespace AlfenHub.Knx.Services
             yield return UpdateValue(
                 $"{nameof(AlfenData.Socket1)}.{nameof(AlfenData.Socket1.EnergyMeasurements.ReactiveEnergySum)}",
                 BitConverter.GetBytes((int)alfenData.Socket1.EnergyMeasurements.ReactiveEnergySum));
+
+            yield return UpdateValue(
+                $"{nameof(AlfenData.Socket1)}.{nameof(AlfenData.Socket1.StatusAndTransaction.Mode3State)}",
+                new [] {(byte)Convert.ToSByte((int)alfenData.Socket1.StatusAndTransaction.Mode3State)});
 
             yield return UpdateValue(
                 $"{nameof(AlfenData.Socket1)}.SlaveMaxCurrent",
