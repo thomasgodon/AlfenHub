@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using AlfenHub.Alfen.Models;
 
-namespace AlfenHub.Alfen.Modbus.Server;
+namespace AlfenHub.Alfen.Modbus.Client;
 
 internal static class ExtensionMethods
 {

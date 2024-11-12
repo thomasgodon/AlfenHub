@@ -8,7 +8,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace AlfenHub.Alfen.Modbus.Server;
+namespace AlfenHub.Alfen.Modbus.Client;
 
 internal class AlfenModbusClient : IAlfenModbusClient
 {

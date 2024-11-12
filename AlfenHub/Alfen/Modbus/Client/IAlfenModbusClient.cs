@@ -1,6 +1,6 @@
 ﻿using AlfenHub.Alfen.Models;
 
-namespace AlfenHub.Alfen.Modbus.Server;
+namespace AlfenHub.Alfen.Modbus.Client;
 
 internal interface IAlfenModbusClient
 {

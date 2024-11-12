@@ -1,4 +1,4 @@
-using AlfenHub.Alfen.Modbus.Server;
+using AlfenHub.Alfen.Modbus.Client;
 using Microsoft.Extensions.Hosting;
 
 namespace AlfenHub;

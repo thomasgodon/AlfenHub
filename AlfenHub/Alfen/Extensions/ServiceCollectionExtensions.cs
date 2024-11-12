@@ -1,5 +1,5 @@
-﻿using AlfenHub.Alfen.Modbus.Models;
-using AlfenHub.Alfen.Modbus.Server;
+﻿using AlfenHub.Alfen.Modbus.Client;
+using AlfenHub.Alfen.Modbus.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
