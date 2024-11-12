@@ -62,17 +62,50 @@ namespace AlfenHub.Knx.Services
 
         private IEnumerable<KnxValue?> UpdateValues(AlfenData alfenData)
         {
-            // RealPowerSum - 14.056 power
+            yield return UpdateValue(
+                $"{nameof(AlfenData.Socket1)}.{nameof(AlfenData.Socket1.EnergyMeasurements.MeterState)}",
+                BitConverter.GetBytes(alfenData.Socket1.EnergyMeasurements.MeterState));
+
+            yield return UpdateValue(
+                $"{nameof(AlfenData.Socket1)}.{nameof(AlfenData.Socket1.EnergyMeasurements.CurrentSum)}",
+                BitConverter.GetBytes(alfenData.Socket1.EnergyMeasurements.CurrentSum));
+
+            yield return UpdateValue(
+                $"{nameof(AlfenData.Socket1)}.{nameof(AlfenData.Socket1.EnergyMeasurements.PowerFactorSum)}",
+                BitConverter.GetBytes(alfenData.Socket1.EnergyMeasurements.PowerFactorSum));
+
+            yield return UpdateValue(
+                $"{nameof(AlfenData.Socket1)}.{nameof(AlfenData.Socket1.EnergyMeasurements.Frequency)}",
+                BitConverter.GetBytes(alfenData.Socket1.EnergyMeasurements.Frequency));
+
             yield return UpdateValue(
                 $"{nameof(AlfenData.Socket1)}.{nameof(AlfenData.Socket1.EnergyMeasurements.RealPowerSum)}",
                 BitConverter.GetBytes(alfenData.Socket1.EnergyMeasurements.RealPowerSum));
 
-            // SlaveMaxCurrent - 14.019 electric current
+            yield return UpdateValue(
+                $"{nameof(AlfenData.Socket1)}.{nameof(AlfenData.Socket1.EnergyMeasurements.ApparentPowerSum)}",
+                BitConverter.GetBytes(alfenData.Socket1.EnergyMeasurements.ApparentPowerSum));
+
+            yield return UpdateValue(
+                $"{nameof(AlfenData.Socket1)}.{nameof(AlfenData.Socket1.EnergyMeasurements.ReactivePowerSum)}",
+                BitConverter.GetBytes(alfenData.Socket1.EnergyMeasurements.ReactivePowerSum));
+
+            yield return UpdateValue(
+                $"{nameof(AlfenData.Socket1)}.{nameof(AlfenData.Socket1.EnergyMeasurements.RealEnergyDeliveredSum)}",
+                BitConverter.GetBytes(alfenData.Socket1.EnergyMeasurements.RealEnergyDeliveredSum));
+
+            yield return UpdateValue(
+                $"{nameof(AlfenData.Socket1)}.{nameof(AlfenData.Socket1.EnergyMeasurements.RealEnergyConsumedSum)}",
+                BitConverter.GetBytes(alfenData.Socket1.EnergyMeasurements.RealEnergyConsumedSum));
+
+            yield return UpdateValue(
+                $"{nameof(AlfenData.Socket1)}.{nameof(AlfenData.Socket1.EnergyMeasurements.ReactiveEnergySum)}",
+                BitConverter.GetBytes(alfenData.Socket1.EnergyMeasurements.ReactiveEnergySum));
+
             yield return UpdateValue(
                 $"{nameof(AlfenData.Socket1)}.SlaveMaxCurrent",
                 BitConverter.GetBytes(alfenData.Socket1.StatusAndTransaction.ModbusSlaveMaxCurrent));
 
-            // ActualAppliedMaxCurrent - 14.019 electric current
             yield return UpdateValue(
                 $"{nameof(AlfenData.Socket1)}.{nameof(AlfenData.Socket1.StatusAndTransaction.ActualAppliedMaxCurrent)}",
                 BitConverter.GetBytes(alfenData.Socket1.StatusAndTransaction.ActualAppliedMaxCurrent));
