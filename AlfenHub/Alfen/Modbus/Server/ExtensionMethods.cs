@@ -1,4 +1,7 @@
-﻿namespace AlfenHub.Alfen.Modbus.Server;
+﻿using System.Text;
+using AlfenHub.Alfen.Models;
+
+namespace AlfenHub.Alfen.Modbus.Server;
 
 internal static class ExtensionMethods
 {
@@ -25,6 +28,16 @@ internal static class ExtensionMethods
         return value is float.NaN ? 0f : value;
     }
 
+    public static double ToDouble(this ushort[] data)
+    {
+        var bytes = BitConverter.GetBytes(data.ToArray()[1])
+            .Concat(BitConverter.GetBytes(data.ToArray()[0]))
+            .Concat(BitConverter.GetBytes(data.ToArray()[3]))
+            .Concat(BitConverter.GetBytes(data.ToArray()[2])).ToArray();
+        var value = BitConverter.ToDouble(bytes);
+        return value is double.NaN ? 0d : value;
+    }
+
     public static ushort[] ToUshortArray(this float value)
     {
         // Convert the float to its byte representation
@@ -43,6 +56,33 @@ internal static class ExtensionMethods
         var bytes = BitConverter.GetBytes(data.ToArray()[0]);
         return BitConverter.ToUInt16(bytes);
     }
+
+    public static AlfenMode3State ToMode3State(this ushort[] data)
+    {
+        var bytes = BitConverter.GetBytes(data.ToArray()[1])
+            .Concat(BitConverter.GetBytes(data.ToArray()[0]))
+            .Concat(BitConverter.GetBytes(data.ToArray()[3]))
+            .Concat(BitConverter.GetBytes(data.ToArray()[2]))
+            .Concat(BitConverter.GetBytes(data.ToArray()[4])).ToArray();
+
+        var stringValue = Encoding.UTF8.GetString(bytes).Replace("\0", string.Empty);
+
+        return GetMode3State(stringValue) ;
+    }
+
+    private static AlfenMode3State GetMode3State(string value)
+        => value switch
+        {
+            "A" => AlfenMode3State.A,
+            "B1" => AlfenMode3State.B1,
+            "B2" => AlfenMode3State.B2,
+            "C1" => AlfenMode3State.C1,
+            "C2" => AlfenMode3State.C2,
+            "D1" => AlfenMode3State.D1,
+            "D2" => AlfenMode3State.D2,
+            "E" => AlfenMode3State.E,
+            _ => AlfenMode3State.F
+        };
 
     public static TimeSpan ToTimespan(this ushort[] data)
     {

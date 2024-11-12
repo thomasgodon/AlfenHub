@@ -3,6 +3,7 @@
     internal class AlfenStatusAndTransaction
     {
         public ushort Availability { get; init; } = default!;
+        public AlfenMode3State Mode3State { get; init; } = default!;
         public float ActualAppliedMaxCurrent { get; init; } = default!;
         public float ModbusSlaveMaxCurrent { get; init; } = default!;
         public float ActiveLoadBalancingSafeCurrent { get; init; } = default!;
