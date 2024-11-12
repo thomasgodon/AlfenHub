@@ -22,20 +22,23 @@ internal static class ExtensionMethods
 
     public static float ToFloat(this ushort[] data)
     {
-        var bytes = BitConverter.GetBytes(data.ToArray()[1])
-            .Concat(BitConverter.GetBytes(data.ToArray()[0])).ToArray();
+        var array = data.ToArray();
+        var bytes = BitConverter.GetBytes(array[1])
+            .Concat(BitConverter.GetBytes(array[0])).ToArray();
         var value = BitConverter.ToSingle(bytes);
         return value is float.NaN ? 0f : value;
     }
 
     public static double ToDouble(this ushort[] data)
     {
-        var bytes = BitConverter.GetBytes(data.ToArray()[1])
-            .Concat(BitConverter.GetBytes(data.ToArray()[0]))
-            .Concat(BitConverter.GetBytes(data.ToArray()[3]))
-            .Concat(BitConverter.GetBytes(data.ToArray()[2])).ToArray();
+        var array = data.ToArray();
+        var bytes = BitConverter.GetBytes(array[3])
+            .Concat(BitConverter.GetBytes(array[2]))
+            .Concat(BitConverter.GetBytes(array[1]))
+            .Concat(BitConverter.GetBytes(array[0]))
+            .ToArray();
         var value = BitConverter.ToDouble(bytes);
-        return value is double.NaN ? 0d : value;
+        return value is double.NaN ? 0f : value;
     }
 
     public static ushort[] ToUshortArray(this float value)
@@ -59,11 +62,13 @@ internal static class ExtensionMethods
 
     public static AlfenMode3State ToMode3State(this ushort[] data)
     {
-        var bytes = BitConverter.GetBytes(data.ToArray()[1])
-            .Concat(BitConverter.GetBytes(data.ToArray()[0]))
-            .Concat(BitConverter.GetBytes(data.ToArray()[3]))
-            .Concat(BitConverter.GetBytes(data.ToArray()[2]))
-            .Concat(BitConverter.GetBytes(data.ToArray()[4])).ToArray();
+        var array = data.ToArray();
+        var bytes = BitConverter.GetBytes(array[4])
+            .Concat(BitConverter.GetBytes(array[3]))
+            .Concat(BitConverter.GetBytes(array[2]))
+            .Concat(BitConverter.GetBytes(array[1]))
+            .Concat(BitConverter.GetBytes(array[0]))
+            .ToArray();
 
         var stringValue = Encoding.UTF8.GetString(bytes).Replace("\0", string.Empty);
 
