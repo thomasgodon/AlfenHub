@@ -79,12 +79,12 @@ internal static class ExtensionMethods
         => value switch
         {
             "A" => AlfenMode3State.A,
-            "B1" => AlfenMode3State.B1,
-            "B2" => AlfenMode3State.B2,
-            "C1" => AlfenMode3State.C1,
-            "C2" => AlfenMode3State.C2,
-            "D1" => AlfenMode3State.D1,
-            "D2" => AlfenMode3State.D2,
+            "1B" => AlfenMode3State.B1,
+            "2B" => AlfenMode3State.B2,
+            "1C" => AlfenMode3State.C1,
+            "2C" => AlfenMode3State.C2,
+            "1D" => AlfenMode3State.D1,
+            "2D" => AlfenMode3State.D2,
             "E" => AlfenMode3State.E,
             _ => AlfenMode3State.F
         };
