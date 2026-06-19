@@ -1,0 +1,16 @@
+# Build output
+**/bin/
+**/obj/
+publish/
+
+# IDE / VCS
+.git/
+.github/
+.vs/
+.vscode/
+
+# Keep dev hosts/IPs out of the image
+**/appsettings.development.json
+
+# Docs and misc
+*.md

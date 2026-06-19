@@ -18,6 +18,19 @@ dotnet publish AlfenHub -c Release -r linux-arm64 --self-contained   # publish f
 
 There is **no test project** and no linter configured — `dotnet build` is the only verification step.
 
+### Docker
+
+A root `Dockerfile` builds a multi-stage, framework-dependent image (`mcr.microsoft.com/dotnet/runtime:8.0` runtime stage — plain runtime, not `aspnet`, since this is a worker).
+
+```powershell
+docker build -t alfenhub:test .                        # build image locally (linux/amd64)
+docker run --rm -e AlfenModbusOptions__Host=192.168.0.19 alfenhub:test   # run; logs to stdout
+```
+
+Config is overridden at runtime via environment variables using .NET's `__` section separator (e.g. `AlfenModbusOptions__Host`, `KnxOptions__Host`). No real hosts/secrets are baked into the image — `appsettings.development.json` is excluded via `.dockerignore`, and `DOTNET_ENVIRONMENT` defaults to `Production`.
+
+`.github/workflows/release.yml` builds and pushes the image to GHCR (`ghcr.io/thomasgodon/alfenhub`) whenever a GitHub **release** is published (also runnable via `workflow_dispatch`). It tags the image with the release semver + `latest`, authenticating with the built-in `GITHUB_TOKEN` (no extra secrets).
+
 Configuration lives in `AlfenHub/appsettings.json` (committed defaults, empty hosts) and `appsettings.development.json` (local overrides, gitignored values). Both are copied to output on build. Environment is selected via `DOTNET_ENVIRONMENT` (`development` set in `launchSettings.json`).
 
 ## Architecture
