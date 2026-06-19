@@ -8,7 +8,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace AlfenHub.Alfen.Modbus.Server;
+namespace AlfenHub.Alfen.Modbus.Client;
 
 internal class AlfenModbusClient : IAlfenModbusClient
 {
@@ -167,6 +167,7 @@ internal class AlfenModbusClient : IAlfenModbusClient
             {
                 EnergyMeasurements = new AlfenEnergyMeasurements
                 {
+                    MeterState = socket1EnergyMeasurementsRegisters.GetSection(300, 300, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToUshort(),
                     VoltageL1N = socket1EnergyMeasurementsRegisters.GetSection(306, 307, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToFloat(),
                     VoltageL2N = socket1EnergyMeasurementsRegisters.GetSection(308, 309, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToFloat(),
                     VoltageL3N = socket1EnergyMeasurementsRegisters.GetSection(310, 311, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToFloat(),
@@ -174,22 +175,20 @@ internal class AlfenModbusClient : IAlfenModbusClient
                     VoltageL2L3 = socket1EnergyMeasurementsRegisters.GetSection(314, 315, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToFloat(),
                     VoltageL3L1 = socket1EnergyMeasurementsRegisters.GetSection(316, 317, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToFloat(),
                     CurrentN = socket1EnergyMeasurementsRegisters.GetSection(318, 319, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToFloat(),
-                    CurrentPhaseL1 = socket1EnergyMeasurementsRegisters.GetSection(320, 321, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToFloat(),
-                    CurrentPhaseL2 = socket1EnergyMeasurementsRegisters.GetSection(322, 323, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToFloat(),
-                    CurrentPhaseL3 = socket1EnergyMeasurementsRegisters.GetSection(324, 325, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToFloat(),
                     CurrentSum = socket1EnergyMeasurementsRegisters.GetSection(326, 327, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToFloat(),
-                    PowerFactorPhaseL1 = socket1EnergyMeasurementsRegisters.GetSection(328, 329, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToFloat(),
-                    PowerFactorPhaseL2 = socket1EnergyMeasurementsRegisters.GetSection(330, 331, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToFloat(),
-                    PowerFactorPhaseL3 = socket1EnergyMeasurementsRegisters.GetSection(332, 333, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToFloat(),
+                    PowerFactorSum = socket1EnergyMeasurementsRegisters.GetSection(334, 335, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToFloat(),
                     Frequency = socket1EnergyMeasurementsRegisters.GetSection(336, 337, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToFloat(),
-                    RealPowerPhaseL1 = socket1EnergyMeasurementsRegisters.GetSection(338, 339, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToFloat(),
-                    RealPowerPhaseL2 = socket1EnergyMeasurementsRegisters.GetSection(340, 341, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToFloat(),
-                    RealPowerPhaseL3 = socket1EnergyMeasurementsRegisters.GetSection(342, 343, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToFloat(),
                     RealPowerSum = socket1EnergyMeasurementsRegisters.GetSection(344, 345, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToFloat(),
+                    ApparentPowerSum = socket1EnergyMeasurementsRegisters.GetSection(352, 353, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToFloat(),
+                    ReactivePowerSum = socket1EnergyMeasurementsRegisters.GetSection(360, 361, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToFloat(),
+                    RealEnergyDeliveredSum = socket1EnergyMeasurementsRegisters.GetSection(374, 377, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToDouble(),
+                    RealEnergyConsumedSum = socket1EnergyMeasurementsRegisters.GetSection(390, 393, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToDouble(),
+                    ReactiveEnergySum = socket1EnergyMeasurementsRegisters.GetSection(422, 425, AlfenModbusConstants.SocketEnergyMeasurementsStartAddress, AlfenModbusConstants.SocketEnergyMeasurementsEndAddress).ToDouble(),
                 },
                 StatusAndTransaction = new AlfenStatusAndTransaction
                 {
                     Availability = socket1StatusAndTransactionRegisters.GetSection(1200, 1200, AlfenModbusConstants.SocketStatusAndTransactionStartAddress, AlfenModbusConstants.SocketStatusAndTransactionEndAddress).ToUshort(),
+                    Mode3State = socket1StatusAndTransactionRegisters.GetSection(1201, 1205, AlfenModbusConstants.SocketStatusAndTransactionStartAddress, AlfenModbusConstants.SocketStatusAndTransactionEndAddress).ToMode3State(),
                     ActualAppliedMaxCurrent = socket1StatusAndTransactionRegisters.GetSection(1206, 1207, AlfenModbusConstants.SocketStatusAndTransactionStartAddress, AlfenModbusConstants.SocketStatusAndTransactionEndAddress).ToFloat(),
                     ModbusSlaveMaxCurrentValidTime = socket1StatusAndTransactionRegisters.GetSection(1208, 1209, AlfenModbusConstants.SocketStatusAndTransactionStartAddress, AlfenModbusConstants.SocketStatusAndTransactionEndAddress).ToTimespan(),
                     ModbusSlaveMaxCurrent = socket1StatusAndTransactionRegisters.GetSection(1208, 1209, AlfenModbusConstants.SocketStatusAndTransactionStartAddress, AlfenModbusConstants.SocketStatusAndTransactionEndAddress).ToFloat(),

@@ -1,4 +1,4 @@
-﻿using AlfenHub.Alfen.Modbus.Server;
+﻿using AlfenHub.Alfen.Modbus.Client;
 using AlfenHub.Knx.Extensions;
 using AlfenHub.Knx.Models;
 using Knx.Falcon;
