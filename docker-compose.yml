@@ -8,8 +8,15 @@ services:
     #   dockerfile: Dockerfile
     container_name: alfenhub
     restart: unless-stopped
+    # Read-only web dashboard (set DashboardOptions__Enabled=false to disable; then drop this mapping).
+    ports:
+      - "8080:8080"
     environment:
       DOTNET_ENVIRONMENT: Production
+
+      # --- Read-only web dashboard ---
+      DashboardOptions__Enabled: "true"
+      DashboardOptions__Port: "8080"
 
       # --- Alfen Modbus TCP ---
       AlfenModbusOptions__Host: "192.168.0.19"

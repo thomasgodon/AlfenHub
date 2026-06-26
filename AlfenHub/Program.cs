@@ -1,23 +1,32 @@
 using AlfenHub;
 using AlfenHub.Application.Charging;
+using AlfenHub.Application.Dashboard.Options;
 using AlfenHub.Application.Extensions;
+using AlfenHub.Dashboard;
 using AlfenHub.Infrastructure.Extensions;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
-var host = Host
-    .CreateDefaultBuilder(args)
-    .ConfigureServices((hostContext, services) =>
-    {
-        var configuration = hostContext.Configuration;
-        services
-            .AddHostedService<Worker>()
-            .AddApplication()
-            .AddInfrastructure(configuration);
+var builder = WebApplication.CreateBuilder(args);
 
-        // The poll interval shares the Modbus configuration section.
-        services.Configure<ChargerPollingOptions>(configuration.GetSection("AlfenModbusOptions"));
-    })
-    .Build();
+builder.Services
+    .AddHostedService<Worker>()
+    .AddApplication()
+    .AddInfrastructure(builder.Configuration);
 
-await host.RunAsync();
+// The poll interval shares the Modbus configuration section.
+builder.Services.Configure<ChargerPollingOptions>(builder.Configuration.GetSection("AlfenModbusOptions"));
+builder.Services.Configure<DashboardOptions>(builder.Configuration.GetSection(nameof(DashboardOptions)));
+
+var dashboardOptions = builder.Configuration.GetSection(nameof(DashboardOptions)).Get<DashboardOptions>() ?? new DashboardOptions();
+
+// Bind Kestrel to the dashboard port when enabled; otherwise bind no endpoints so the host behaves
+// like the original worker service (no listening port).
+builder.WebHost.UseUrls(dashboardOptions.Enabled ? $"http://*:{dashboardOptions.Port}" : string.Empty);
+
+var app = builder.Build();
+
+if (dashboardOptions.Enabled)
+{
+    app.MapDashboard();
+}
+
+await app.RunAsync();
