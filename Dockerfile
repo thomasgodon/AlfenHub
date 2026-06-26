@@ -4,8 +4,12 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Restore as a separate layer for better caching
+# Restore as a separate layer for better caching.
+# Copy every project file first so restoring the host transitively restores the layer projects.
 COPY AlfenHub/AlfenHub.csproj AlfenHub/
+COPY AlfenHub.Application/AlfenHub.Application.csproj AlfenHub.Application/
+COPY AlfenHub.Domain/AlfenHub.Domain.csproj AlfenHub.Domain/
+COPY AlfenHub.Infrastructure/AlfenHub.Infrastructure.csproj AlfenHub.Infrastructure/
 RUN dotnet restore AlfenHub/AlfenHub.csproj
 
 # Copy the rest and publish (framework-dependent; runtime comes from the base image)

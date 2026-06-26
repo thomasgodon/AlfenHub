@@ -1,19 +1,19 @@
-using AlfenHub.Alfen.Modbus.Client;
+using AlfenHub.Application.Charging;
 using Microsoft.Extensions.Hosting;
 
 namespace AlfenHub;
 
-internal class Worker : BackgroundService
+internal sealed class Worker : BackgroundService
 {
-    private readonly IAlfenModbusClient _alfenModbusServer;
+    private readonly ChargerPollingService _pollingService;
 
-    public Worker(IAlfenModbusClient alfenModbusServer)
+    public Worker(ChargerPollingService pollingService)
     {
-        _alfenModbusServer = alfenModbusServer;
+        _pollingService = pollingService;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
+    protected override Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        await _alfenModbusServer.Start(cancellationToken);
+        return _pollingService.RunAsync(cancellationToken);
     }
 }

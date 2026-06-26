@@ -3,6 +3,24 @@ Alfen charger modbus hub
 
 A .NET 8 worker that bridges an Alfen EV charger (Modbus TCP) to a KNX bus.
 
+## Architecture
+
+The solution follows a clean DDD / layered structure with a single `Charging` bounded
+context and two infrastructure adapters:
+
+| Project | Responsibility |
+|---|---|
+| `AlfenHub.Domain` | The `Charger` aggregate, `Socket` entity, value objects (`ElectricCurrent`, `Power`, …), domain events and the `IChargerGateway` port. No external dependencies. |
+| `AlfenHub.Application` | Use cases & orchestration: the polling loop (`ChargerPollingService`), MediatR commands/notifications, the `IBuildingBus` port and the `IChargerControlBuffer`. |
+| `AlfenHub.Infrastructure` | The adapters: `AlfenModbusGateway` (Modbus TCP) and `KnxBuildingBus` (KNX/IP), plus register decoding and KNX encoding. |
+| `AlfenHub` | Host / composition root: `Worker`, `Program.cs`, `appsettings.json`. |
+| `AlfenHub.Tests` | xUnit tests for the domain and the infrastructure conversions. |
+
+Dependency direction is Domain ← Application ← Infrastructure ← Host. The KNX side
+never talks to the Modbus side directly: charger state flows out as a MediatR
+notification, and inbound KNX writes flow back as a `SetSocketMaxCurrentCommand` that the
+polling loop re-applies to the charger.
+
 ## Running in Docker
 
 Images are published to GitHub Container Registry on every GitHub release:

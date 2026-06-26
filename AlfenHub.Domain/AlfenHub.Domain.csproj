@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <!--
+    The Charging bounded context. Pure domain: no MediatR, no FluentModbus, no Knx.Falcon.
+    This project must remain free of any infrastructure dependency.
+  -->
+
+</Project>

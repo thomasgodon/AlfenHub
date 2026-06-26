@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -8,10 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Knx.Falcon.Sdk" Version="6.1.6264" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
-    <PackageReference Include="MediatR" Version="12.2.0" />
-    <PackageReference Include="FluentModbus" Version="5.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AlfenHub.Application\AlfenHub.Application.csproj" />
+    <ProjectReference Include="..\AlfenHub.Infrastructure\AlfenHub.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

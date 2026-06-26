@@ -6,17 +6,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A .NET 8 console worker (`Microsoft.Extensions.Hosting` `BackgroundService`) that bridges an **Alfen EV charger** (read/write over **Modbus TCP**) to a **KNX** building bus. It polls the charger's Modbus registers, publishes the readings onto KNX group addresses, and writes KNX commands (e.g. max charging current) back to the charger. Intended to run on `linux-arm64` (e.g. a Raspberry Pi) as a long-lived service.
 
+The codebase is organised as a **clean DDD / layered solution**: a single `Charging` bounded context (`AlfenHub.Domain`), application use cases (`AlfenHub.Application`), the Modbus + KNX adapters (`AlfenHub.Infrastructure`), and the host (`AlfenHub`). Dependency direction is **Domain ← Application ← Infrastructure ← Host**.
+
 ## Commands
 
 All commands use PowerShell. Run from the repo root.
 
 ```powershell
 dotnet build AlfenHub.sln                              # build
+dotnet test AlfenHub.Tests                             # run unit tests (domain + infra conversions)
 dotnet run --project AlfenHub                          # run locally (uses DOTNET_ENVIRONMENT=development)
 dotnet publish AlfenHub -c Release -r linux-arm64 --self-contained   # publish for the Pi
 ```
 
-There is **no test project** and no linter configured — `dotnet build` is the only verification step.
+`AlfenHub.Tests` (xUnit) covers the domain value objects, the `Charger` aggregate's events, the Modbus register decode/encode (`ModbusRegisterExtensions`) and the KNX encoding (`KnxReadingEncoder`). It reaches `internal` infrastructure types via `InternalsVisibleTo`. No linter is configured — `dotnet build` + `dotnet test` are the verification steps.
 
 ### Docker
 
@@ -35,41 +38,45 @@ Configuration lives in `AlfenHub/appsettings.json` (committed defaults, empty ho
 
 ## Architecture
 
-The app is wired in `Program.cs`: a generic host registers `Worker` (the hosted service), the Alfen and KNX feature modules (each via its own `AddXxx` `ServiceCollectionExtensions`), and **MediatR** for in-process messaging. MediatR is the spine connecting the two halves — there are no direct calls between the Alfen and KNX modules.
+Four projects plus tests, wired in `Program.cs`: the host registers `Worker`, then `AddApplication()` (MediatR + the polling service + the control buffer) and `AddInfrastructure(configuration)` (the Modbus and KNX adapters). **MediatR** lives at the application layer and is the spine connecting the two adapters — there are no direct calls between the Modbus and KNX sides.
+
+- **`AlfenHub.Domain`** — the `Charging` bounded context. `Charger` aggregate root, `Socket` entity, value objects (`ElectricCurrent`, `Voltage`, `Power`, `Energy`, `Frequency`, `PowerFactor`, `Temperature`, `SocketId`, `MaxCurrentSetpoint`), `Mode3State` enum, the `ChargerStateRefreshed` domain event, and the `IChargerGateway` repository port. No MediatR / FluentModbus / Knx.Falcon references.
+- **`AlfenHub.Application`** — `ChargerPollingService` (the loop), the `IBuildingBus` port, the `IChargerControlBuffer` (replaces the old shared-mutable bridge), MediatR commands/notifications and handlers, and `MediatRDomainEventDispatcher` (republishes domain events as MediatR notifications so the domain stays messaging-free).
+- **`AlfenHub.Infrastructure`** — `AlfenModbusGateway : IChargerGateway` (Modbus TCP, register decode/encode in `ModbusRegisterExtensions`, constants in `AlfenModbusConstants`) and `KnxBuildingBus : IBuildingBus` (Falcon `KnxBus`, capability↔group-address maps, byte encoding in `KnxReadingEncoder`, the diff/last-sent buffer). Both options classes (`AlfenModbusOptions`, `KnxOptions`) live here.
+- **`AlfenHub`** — host / composition root: `Worker`, `Program.cs`, `appsettings*.json`.
 
 ### Data flow (charger → KNX)
 
-1. `Worker.ExecuteAsync` calls `AlfenModbusClient.Start`, which runs a single long-lived loop (interval ~1s).
-2. Each tick: reconnect if needed, **write** any pending KNX-originated commands to Modbus, then **read** the charger's holding registers into an `AlfenData` object (`Alfen/Models`).
-3. It publishes `AlfenDataArrivedNotification` via MediatR `IPublisher`.
-4. `KnxAlfenDataNotificationHandler` receives it; if KNX is enabled, it diffs the new data against the buffer (`KnxValueBufferService`) and sends only **changed** values to the bus via `KnxClient`.
+1. `Worker.ExecuteAsync` runs `ChargerPollingService.RunAsync` — a single long-lived loop (`ChargerPollingOptions.PollInterval`, ~1s).
+2. Each tick: re-apply any pending setpoints via `IChargerGateway.WriteMaxCurrentAsync`, then read a fresh `Charger` snapshot via `IChargerGateway.GetAsync` (the `AlfenModbusGateway` reconnects lazily).
+3. Building the `Charger` raises a `ChargerStateRefreshed` domain event; `MediatRDomainEventDispatcher` publishes it as a `ChargerStateRefreshedNotification`.
+4. `ChargerStateRefreshedNotificationHandler` receives it; if `IBuildingBus.IsEnabled`, `KnxBuildingBus` diffs the readings against its buffer and sends only **changed** values to the bus.
 
 ### Data flow (KNX → charger)
 
-1. `KnxClient` subscribes to `GroupMessageReceived` on the KNX bus.
-2. `ValueRead` → `KnxReadValueRequest` (returns the buffered value for that group address). `ValueWrite` → `KnxWriteValueRequest`.
-3. `KnxWriteValueRequestHandler` maps the group address to a capability string and stores the desired value on `AlfenModbusClient.SocketWritableData` (a shared singleton dictionary).
-4. On its next tick, the Modbus loop's `WriteValuesAsync` flushes that to the charger (e.g. writing Modbus Slave Max Current to register 1210).
+1. `KnxBuildingBus` subscribes to `GroupMessageReceived` on the KNX bus (on first connect).
+2. `ValueRead` → answered directly from its own buffer (no MediatR round-trip). `ValueWrite` → mapped to a capability string.
+3. For `Socket1.SlaveMaxCurrent`, it decodes the float (reversing byte order) and sends a `SetSocketMaxCurrentCommand` via MediatR `ISender`.
+4. `SetSocketMaxCurrentCommandHandler` stores the setpoint in `IChargerControlBuffer`. The polling loop re-asserts it to register 1210 on every tick.
 
-So `IAlfenModbusClient` is the **shared mutable bridge**: KNX writes stage values onto it; the Modbus loop reads them out. Both `IAlfenModbusClient` and `IKnxValueBufferService` are singletons.
+The **`IChargerControlBuffer`** replaces the old `AlfenModbusClient.SocketWritableData` shared-mutable singleton. It **retains** the latest setpoint per socket (rather than draining it) because an Alfen charger falls back to its safe current once the Modbus max-current validity time elapses, so the loop must re-write it each cycle.
 
 ### Capability strings
 
-Both directions key on dotted **capability strings** like `Socket1.RealPowerSum` or `Socket1.SlaveMaxCurrent`. These strings are the contract between the Modbus register layer and KNX group addresses:
+Both directions key on dotted **capability strings** like `Socket1.RealPowerSum` or `Socket1.SlaveMaxCurrent` — the contract between charger readings and KNX group addresses:
 
-- In `appsettings.json` under `KnxOptions.ReadGroupAddresses` / `WriteGroupAddresses`, each capability is mapped to a KNX group address. **An empty group address means that capability is skipped** (see `KnxExtensions.GetReadGroupAddressesFromOptions`).
-- `KnxValueBufferService.UpdateValues` builds the capability→value mapping; the read/write request handlers build group-address→capability maps from the same options.
-- Most capability strings are generated with `nameof(...)` against the `AlfenData` model tree, so **renaming a property on `AlfenData` silently changes the capability string** and breaks the appsettings mapping. Keep them in sync.
+- In `appsettings.json` under `KnxOptions.ReadGroupAddresses` / `WriteGroupAddresses`, each capability maps to a KNX group address. **An empty group address means that capability is skipped** (see `KnxOptionsExtensions.GetReadGroupAddressesFromOptions`).
+- The capability strings are defined as literals in `KnxCapabilities` and produced by `KnxReadingEncoder.Encode`. They are still **socket-1-specific** and string-coupled to the appsettings keys (a known TODO — see `KnxCapabilities`).
 
 ### Modbus register decoding
 
-`AlfenModbusClient.GetAlfenModbusData` reads three register blocks (station status, socket energy measurements, socket status/transaction) by unit/slave address and start address (constants in `AlfenModbusConstants`). `ExtensionMethods.GetSection` slices a block by absolute register address, and `ToFloat`/`ToDouble`/`ToUshort`/`ToMode3State`/`ToTimespan` decode the Alfen word/byte ordering (note the deliberate word-swap in `ToFloat`/`ToDouble` and the reversed byte order when writing to KNX in `KnxClient`/`KnxValueBufferService`). Register numbers and counts come from the Alfen Modbus TCP/IP spec.
+`AlfenModbusGateway.GetAsync` reads three register blocks (station status, socket energy measurements, socket status/transaction) by unit/slave address and start address (constants in `AlfenModbusConstants`). `ModbusRegisterExtensions.GetSection` slices a block by absolute register address, and `ToFloat`/`ToDouble`/`ToUshort`/`ToMode3State`/`ToTimespan` decode the Alfen word/byte ordering (note the deliberate word-swap in `ToFloat`/`ToDouble`, and the reversed byte order when writing to KNX in `KnxBuildingBus.SendValuesAsync`). Register numbers and counts come from the Alfen Modbus TCP/IP spec.
 
-Currently only **Socket 1** is fully populated even though the station reports `TotalSockets`; extending to socket 2 means reading the `Socket2SlaveAddress` block and adding `Socket2` to `AlfenData` + the buffer service + appsettings.
+Currently only **Socket 1** is populated even though the station reports `TotalSockets`; extending to socket 2 means reading the `Socket2SlaveAddress` block in `AlfenModbusGateway`, adding a second `Socket` to the `Charger`, and generalising the socket-1-specific `KnxCapabilities` + appsettings.
 
 ## Conventions
 
-- Feature modules (`Alfen/`, `Knx/`) are self-contained, each with `Extensions/ServiceCollectionExtensions.cs` exposing one `AddXxx(configuration)` entry point. New cross-module communication goes through a MediatR notification or request, not a direct dependency.
-- Options classes (`AlfenModbusOptions`, `KnxOptions`) bind from the config section named after the class (`configuration.GetSection(nameof(...))`).
-- Most types are `internal`.
-- Note: `KnxWriteValueRequestHandler .cs` has a stray space in its filename.
+- Each non-domain layer exposes one DI entry point: `AddApplication()` and `AddInfrastructure(configuration)` in `Extensions/ServiceCollectionExtensions.cs`. New cross-adapter communication goes through a MediatR command/notification or a domain port, never a direct dependency.
+- The domain raises plain `IDomainEvent`s; the application bridges them onto MediatR. Keep the domain free of MediatR / FluentModbus / Knx.Falcon.
+- Options classes (`AlfenModbusOptions`, `KnxOptions`) bind from the config section named after the class (`configuration.GetSection(nameof(...))`); `ChargerPollingOptions` binds from the `AlfenModbusOptions` section (it shares the `PollInterval` key).
+- Most types are `internal`; the test project sees infrastructure internals via `InternalsVisibleTo`.
