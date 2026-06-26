@@ -33,6 +33,20 @@ docker run -d --name alfenhub \
 > The image targets `linux/amd64`. KNX group-address mappings still come from the
 > baked `appsettings.json`; override individual keys with `KnxOptions__...` env vars as needed.
 
+### docker compose
+
+A `docker-compose.yml` is provided. Edit the `environment` block (Alfen host, KNX
+settings, group-address mappings) then:
+
+```bash
+docker compose up -d        # pull + run in the background
+docker compose logs -f      # follow logs
+docker compose down         # stop and remove
+```
+
+By default it pulls `ghcr.io/thomasgodon/alfenhub:latest`. To build from source
+instead, uncomment the `build` block (and comment out `image`) in the compose file.
+
 ## Releasing
 
 Publishing a GitHub release triggers `.github/workflows/release.yml`, which builds the

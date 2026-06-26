@@ -1,0 +1,27 @@
+services:
+  alfenhub:
+    image: ghcr.io/thomasgodon/alfenhub:latest
+    # To build locally instead of pulling from GHCR, comment out `image` above
+    # and uncomment the `build` block below:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    container_name: alfenhub
+    restart: unless-stopped
+    environment:
+      DOTNET_ENVIRONMENT: Production
+
+      # --- Alfen Modbus TCP ---
+      AlfenModbusOptions__Host: "192.168.0.19"
+      AlfenModbusOptions__Port: "502"
+      AlfenModbusOptions__PollInterval: "0.00:00:01"
+
+      # --- KNX (set Enabled=true to bridge to the bus) ---
+      KnxOptions__Enabled: "false"
+      KnxOptions__Host: "192.168.0.16"
+      KnxOptions__Port: "3671"
+      KnxOptions__IndividualAddress: ""
+
+      # Map capabilities to KNX group addresses, e.g.:
+      # KnxOptions__ReadGroupAddresses__Socket1.RealPowerSum: "1/2/3"
+      # KnxOptions__WriteGroupAddresses__Socket1.SlaveMaxCurrent: "1/2/10"
