@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A .NET 8 worker (`Microsoft.Extensions.Hosting` `BackgroundService`) that bridges an **Alfen EV charger** (read/write over **Modbus TCP**) to a **KNX** building bus. It polls the charger's Modbus registers, publishes the readings onto KNX group addresses, and writes KNX commands (e.g. max charging current) back to the charger. It also serves a **read-only web dashboard** (Kestrel, default port **8080**) that live-streams every charger reading to the browser over Server-Sent Events. Intended to run on `linux-arm64` (e.g. a Raspberry Pi) as a long-lived service.
+A .NET 10 worker (`Microsoft.Extensions.Hosting` `BackgroundService`) that bridges an **Alfen EV charger** (read/write over **Modbus TCP**) to a **KNX** building bus. It polls the charger's Modbus registers, publishes the readings onto KNX group addresses, and writes KNX commands (e.g. max charging current) back to the charger. It also serves a **read-only web dashboard** (Kestrel, default port **8080**) that live-streams every charger reading to the browser over Server-Sent Events. Intended to run on `linux-arm64` (e.g. a Raspberry Pi) as a long-lived service.
 
 The host is an ASP.NET Core app (`Microsoft.NET.Sdk.Web` + `WebApplication`): the polling worker runs as a hosted service, and Kestrel binds only when the dashboard is enabled (`DashboardOptions.Enabled`). When disabled it binds no port and behaves like the original plain worker.
 
@@ -25,7 +25,7 @@ dotnet publish AlfenHub -c Release -r linux-arm64 --self-contained   # publish f
 
 ### Docker
 
-A root `Dockerfile` builds a multi-stage, framework-dependent image. The runtime stage uses `mcr.microsoft.com/dotnet/aspnet:8.0` (the ASP.NET Core shared framework is required for the Kestrel dashboard) and `EXPOSE`s port 8080.
+A root `Dockerfile` builds a multi-stage, framework-dependent image. The runtime stage uses `mcr.microsoft.com/dotnet/aspnet:10.0` (the ASP.NET Core shared framework is required for the Kestrel dashboard) and `EXPOSE`s port 8080.
 
 ```powershell
 docker build -t alfenhub:test .                        # build image locally (linux/amd64)

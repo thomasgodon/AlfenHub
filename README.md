@@ -1,7 +1,7 @@
 # AlfenHub
 Alfen charger modbus hub
 
-A .NET 8 worker that bridges an Alfen EV charger (Modbus TCP) to a KNX bus.
+A .NET 10 worker that bridges an Alfen EV charger (Modbus TCP) to a KNX bus.
 
 ## Architecture
 

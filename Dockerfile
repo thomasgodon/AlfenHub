@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # --- Build stage ---
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Restore as a separate layer for better caching.
@@ -19,7 +19,7 @@ RUN dotnet publish AlfenHub/AlfenHub.csproj -c Release -o /app/publish
 # --- Runtime stage ---
 # Hosts the read-only web dashboard (Kestrel) alongside the polling worker, so use the ASP.NET
 # Core runtime image (the plain runtime image lacks the ASP.NET shared framework).
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 
