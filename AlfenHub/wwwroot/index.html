@@ -160,6 +160,11 @@
       background: var(--badge-bg); color: var(--text); border: 1px solid var(--border);
     }
 
+    .identity { margin-bottom: clamp(16px, 3vw, 26px); }
+    .identity h3 .bar { background: var(--accent-2); }
+    .ident-grid { display: grid; gap: 0 24px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+    .row .v.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
+
     footer { margin-top: 22px; text-align: center; color: var(--text-faint); font-size: 12px; }
 
     .offline-banner {
@@ -206,6 +211,21 @@
       </div>
     </section>
 
+    <section class="card identity">
+      <h3><span class="bar"></span>Station</h3>
+      <div class="ident-grid">
+        <div class="row"><span class="k">Name</span><span class="v" id="i-name">—</span></div>
+        <div class="row"><span class="k">Serial number</span><span class="v" id="i-serial">—</span></div>
+        <div class="row"><span class="k">Manufacturer</span><span class="v" id="i-manufacturer">—</span></div>
+        <div class="row"><span class="k">Platform</span><span class="v" id="i-platform">—</span></div>
+        <div class="row"><span class="k">Firmware</span><span class="v" id="i-firmware">—</span></div>
+        <div class="row"><span class="k">Modbus table version</span><span class="v" id="i-modbus">—</span></div>
+        <div class="row"><span class="k">Station time</span><span class="v" id="i-time">—</span></div>
+        <div class="row"><span class="k">Time zone</span><span class="v" id="i-tz">—</span></div>
+        <div class="row"><span class="k">Uptime</span><span class="v" id="i-uptime">—</span></div>
+      </div>
+    </section>
+
     <div id="sockets"><div class="empty">Waiting for charger data…</div></div>
 
     <footer>AlfenHub live dashboard · read-only · updates on every charger poll</footer>
@@ -217,6 +237,30 @@
     const fmt = (n, d = 0) => (n === null || n === undefined || Number.isNaN(n))
       ? "—"
       : Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+
+    const txt = s => (s === null || s === undefined || s === "") ? "—" : s;
+
+    // seconds -> "Xd Yh Zm" (drops leading zero parts)
+    function fmtDuration(sec) {
+      if (sec === null || sec === undefined || Number.isNaN(sec)) return "—";
+      sec = Math.floor(sec);
+      const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600),
+            m = Math.floor((sec % 3600) / 60), s = sec % 60;
+      const parts = [];
+      if (d) parts.push(d + "d");
+      if (h || d) parts.push(h + "h");
+      if (m || h || d) parts.push(m + "m");
+      parts.push(s + "s");
+      return parts.join(" ");
+    }
+
+    // minutes offset -> "UTC+02:00"
+    function fmtTz(min) {
+      if (min === null || min === undefined || Number.isNaN(min)) return "—";
+      const sign = min < 0 ? "-" : "+";
+      const a = Math.abs(min);
+      return `UTC${sign}${String(Math.floor(a / 60)).padStart(2, "0")}:${String(a % 60).padStart(2, "0")}`;
+    }
 
     // ---- theme (day/night) ----
     const root = document.documentElement;
@@ -274,32 +318,62 @@
               ${row("Safe current (load bal.)", fmt(s.activeLoadBalancingSafeCurrentA, 1), "A")}
               ${row("Setpoint accounted for", s.modbusSlaveReceivedSetpointAccountedFor ? "yes" : "no")}
               ${row("Charge phases", s.chargePhases)}
+              ${row("Meter state", `<span class="badge">${s.meterState}</span>`)}
+              ${row("Meter type", `<span class="badge">${txt(s.meterType)}</span>`)}
+              ${row("Meter last value", fmtDuration(s.meterLastValueSeconds) + " ago")}
             </div>
             <div class="card c-phase">
-              <h3><span class="bar"></span>Phases</h3>
+              <h3><span class="bar"></span>Voltage &amp; current</h3>
               ${row("Voltage L1–N", fmt(s.voltageL1N, 1), "V")}
               ${row("Voltage L2–N", fmt(s.voltageL2N, 1), "V")}
               ${row("Voltage L3–N", fmt(s.voltageL3N, 1), "V")}
               ${row("Voltage L1–L2", fmt(s.voltageL1L2, 1), "V")}
               ${row("Voltage L2–L3", fmt(s.voltageL2L3, 1), "V")}
               ${row("Voltage L3–L1", fmt(s.voltageL3L1, 1), "V")}
-              ${row("Current sum", fmt(s.currentSum, 2), "A")}
+              ${row("Current L1", fmt(s.currentL1, 2), "A")}
+              ${row("Current L2", fmt(s.currentL2, 2), "A")}
+              ${row("Current L3", fmt(s.currentL3, 2), "A")}
               ${row("Current N", fmt(s.currentN, 2), "A")}
+              ${row("Current sum", fmt(s.currentSum, 2), "A")}
             </div>
             <div class="card c-power">
               <h3><span class="bar"></span>Power</h3>
-              ${row("Real power", fmt(s.realPowerSum), "W")}
-              ${row("Apparent power", fmt(s.apparentPowerSum), "VA")}
-              ${row("Reactive power", fmt(s.reactivePowerSum), "var")}
-              ${row("Power factor", fmt(s.powerFactorSum, 2))}
+              ${row("Real power L1", fmt(s.realPowerL1), "W")}
+              ${row("Real power L2", fmt(s.realPowerL2), "W")}
+              ${row("Real power L3", fmt(s.realPowerL3), "W")}
+              ${row("Real power sum", fmt(s.realPowerSum), "W")}
+              ${row("Apparent power L1", fmt(s.apparentPowerL1), "VA")}
+              ${row("Apparent power L2", fmt(s.apparentPowerL2), "VA")}
+              ${row("Apparent power L3", fmt(s.apparentPowerL3), "VA")}
+              ${row("Apparent power sum", fmt(s.apparentPowerSum), "VA")}
+              ${row("Reactive power L1", fmt(s.reactivePowerL1), "var")}
+              ${row("Reactive power L2", fmt(s.reactivePowerL2), "var")}
+              ${row("Reactive power L3", fmt(s.reactivePowerL3), "var")}
+              ${row("Reactive power sum", fmt(s.reactivePowerSum), "var")}
+              ${row("Power factor L1", fmt(s.powerFactorL1, 2))}
+              ${row("Power factor L2", fmt(s.powerFactorL2, 2))}
+              ${row("Power factor L3", fmt(s.powerFactorL3, 2))}
+              ${row("Power factor sum", fmt(s.powerFactorSum, 2))}
               ${row("Frequency", fmt(s.frequency, 2), "Hz")}
-              ${row("Meter state", `<span class="badge">${s.meterState}</span>`)}
             </div>
             <div class="card c-energy">
               <h3><span class="bar"></span>Energy</h3>
-              ${row("Real energy delivered", fmt(s.realEnergyDeliveredKwh, 2), "kWh")}
-              ${row("Real energy consumed", fmt(s.realEnergyConsumedKwh, 2), "kWh")}
-              ${row("Reactive energy", fmt(s.reactiveEnergyKvarh, 2), "kvarh")}
+              ${row("Real delivered L1", fmt(s.realEnergyDeliveredL1Kwh, 2), "kWh")}
+              ${row("Real delivered L2", fmt(s.realEnergyDeliveredL2Kwh, 2), "kWh")}
+              ${row("Real delivered L3", fmt(s.realEnergyDeliveredL3Kwh, 2), "kWh")}
+              ${row("Real delivered sum", fmt(s.realEnergyDeliveredKwh, 2), "kWh")}
+              ${row("Real consumed L1", fmt(s.realEnergyConsumedL1Kwh, 2), "kWh")}
+              ${row("Real consumed L2", fmt(s.realEnergyConsumedL2Kwh, 2), "kWh")}
+              ${row("Real consumed L3", fmt(s.realEnergyConsumedL3Kwh, 2), "kWh")}
+              ${row("Real consumed sum", fmt(s.realEnergyConsumedKwh, 2), "kWh")}
+              ${row("Apparent L1", fmt(s.apparentEnergyL1Kvah, 2), "kVAh")}
+              ${row("Apparent L2", fmt(s.apparentEnergyL2Kvah, 2), "kVAh")}
+              ${row("Apparent L3", fmt(s.apparentEnergyL3Kvah, 2), "kVAh")}
+              ${row("Apparent sum", fmt(s.apparentEnergyKvah, 2), "kVAh")}
+              ${row("Reactive L1", fmt(s.reactiveEnergyL1Kvarh, 2), "kvarh")}
+              ${row("Reactive L2", fmt(s.reactiveEnergyL2Kvarh, 2), "kvarh")}
+              ${row("Reactive L3", fmt(s.reactiveEnergyL3Kvarh, 2), "kvarh")}
+              ${row("Reactive sum", fmt(s.reactiveEnergyKvarh, 2), "kvarh")}
             </div>
           </div>
         </section>`;
@@ -317,6 +391,16 @@
       $("s-temp").textContent = fmt(d.temperatureC, 1);
       $("s-ocpp").textContent = d.ocppState;
       $("s-sockets").textContent = d.totalSockets;
+
+      $("i-name").textContent = txt(d.name);
+      $("i-serial").textContent = txt(d.serialNumber);
+      $("i-manufacturer").textContent = txt(d.manufacturer);
+      $("i-platform").textContent = txt(d.platformType);
+      $("i-firmware").textContent = txt(d.firmwareVersion);
+      $("i-modbus").textContent = txt(d.modbusTableVersion);
+      $("i-time").textContent = d.stationTime ? new Date(d.stationTime).toLocaleString() : "—";
+      $("i-tz").textContent = fmtTz(d.timeZoneOffsetMinutes);
+      $("i-uptime").textContent = fmtDuration(d.uptimeSeconds);
 
       const sockets = d.sockets || [];
       $("sockets").innerHTML = sockets.length

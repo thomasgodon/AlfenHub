@@ -21,6 +21,14 @@ never talks to the Modbus side directly: charger state flows out as a MediatR
 notification, and inbound KNX writes flow back as a `SetSocketMaxCurrentCommand` that the
 polling loop re-applies to the charger.
 
+Every readable register in the Alfen Modbus TCP/IP spec (product identification, station
+status and the full per-phase socket measurement + status set, for **both sockets**; the
+SCN block is excluded) is surfaced on the web dashboard and, where a group address is
+configured, published to KNX with an appropriate datapoint type. KNX read capabilities are
+keyed `Station.{name}` / `Socket{id}.{name}` under `KnxOptions.ReadGroupAddresses` in
+`appsettings.json` — an empty address skips that capability. Identity strings (name, serial,
+firmware, …) are shown on the dashboard only.
+
 ## Running in Docker
 
 Images are published to GitHub Container Registry on every GitHub release:

@@ -19,8 +19,9 @@ internal static class ModbusRegisterExtensions
         }
 
         var sectionStart = startAddress - registerStartAddress;
-        var section = new ushort[sectionLength + 1];
-        Buffer.BlockCopy(input, sectionStart * 2, section, 0, sectionLength);
+        var section = new ushort[sectionLength];
+        // BlockCopy counts bytes, so copy sectionLength * 2 bytes (each register is a 16-bit word).
+        Buffer.BlockCopy(input, sectionStart * 2, section, 0, sectionLength * 2);
 
         return section;
     }
@@ -63,6 +64,60 @@ internal static class ModbusRegisterExtensions
     {
         var bytes = BitConverter.GetBytes(data.ToArray()[0]);
         return BitConverter.ToUInt16(bytes);
+    }
+
+    /// <summary>Decodes a single SIGNED16 register.</summary>
+    public static short ToShort(this ushort[] data) => unchecked((short)data[0]);
+
+    /// <summary>
+    /// Decodes a string register block. Each 16-bit register holds two 8-bit ASCII chars in network
+    /// (big-endian) byte order, terminated by a trailing zero. NaN-fill bytes (0xFF) are stripped.
+    /// </summary>
+    public static string ToAsciiString(this ushort[] data)
+    {
+        var chars = new List<char>(data.Length * 2);
+        foreach (var register in data)
+        {
+            var high = (byte)(register >> 8);
+            var low = (byte)(register & 0xFF);
+            foreach (var b in new[] { high, low })
+            {
+                if (b is 0x00 or 0xFF)
+                {
+                    continue;
+                }
+
+                chars.Add((char)b);
+            }
+        }
+
+        return new string(chars.ToArray()).Trim();
+    }
+
+    /// <summary>Decodes a word-swapped UNSIGNED64 (4 registers, most-significant word first).</summary>
+    public static ulong ToULong(this ushort[] data)
+    {
+        var bytes = BitConverter.GetBytes(data[3])
+            .Concat(BitConverter.GetBytes(data[2]))
+            .Concat(BitConverter.GetBytes(data[1]))
+            .Concat(BitConverter.GetBytes(data[0]))
+            .ToArray();
+        return BitConverter.ToUInt64(bytes);
+    }
+
+    /// <summary>
+    /// Decodes a UNSIGNED64 register block expressed in milliseconds (Alfen 0.001s step) into a
+    /// <see cref="TimeSpan"/>. Returns <see cref="TimeSpan.Zero"/> for NaN-fill / out-of-range values.
+    /// </summary>
+    public static TimeSpan ToMilliseconds(this ushort[] data)
+    {
+        var value = data.ToULong();
+        if (value == ulong.MaxValue || value > (ulong)TimeSpan.MaxValue.TotalMilliseconds)
+        {
+            return TimeSpan.Zero;
+        }
+
+        return TimeSpan.FromMilliseconds(value);
     }
 
     public static Mode3State ToMode3State(this ushort[] data)

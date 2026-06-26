@@ -116,7 +116,8 @@ internal sealed class KnxBuildingBus : IBuildingBus
             await Task.WhenAny(
                 _bus.WriteGroupValueAsync(
                     knxValue.Address,
-                    new GroupValue(knxValue.Value.Reverse().ToArray()),
+                    // KnxReadingEncoder already produces wire-order (big-endian) DPT bytes.
+                    new GroupValue(knxValue.Value),
                     MessagePriority.Low,
                     writeCancellationToken.Token),
                 Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken));
