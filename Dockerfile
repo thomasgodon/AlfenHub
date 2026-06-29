@@ -25,8 +25,15 @@ COPY --from=build /app/publish .
 
 ENV DOTNET_ENVIRONMENT=Production
 
-# Read-only dashboard port (DashboardOptions.Port, default 8080). Set DashboardOptions__Enabled=false
-# to run as a plain worker with no listening port.
+# Clear the base image's default ASPNETCORE_HTTP_PORTS=8080. The app binds Kestrel explicitly to
+# DashboardOptions.Port (see Program.cs), so leaving this set only produces a misleading
+# "Overriding HTTP_PORTS" warning on startup.
+ENV ASPNETCORE_HTTP_PORTS=
+
+# Read-only dashboard port. This documents the DEFAULT (DashboardOptions.Port = 8080); EXPOSE is
+# informational only. If you change DashboardOptions__Port, change this and the published `-p`
+# mapping to match, or the dashboard won't be reachable. Set DashboardOptions__Enabled=false to run
+# as a plain worker with no listening port.
 EXPOSE 8080
 
 # Override config at `docker run` time via env vars using .NET's `__` section separator, e.g.:

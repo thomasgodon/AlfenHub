@@ -25,7 +25,7 @@ dotnet publish AlfenHub -c Release -r linux-arm64 --self-contained   # publish f
 
 ### Docker
 
-A root `Dockerfile` builds a multi-stage, framework-dependent image. The runtime stage uses `mcr.microsoft.com/dotnet/aspnet:10.0` (the ASP.NET Core shared framework is required for the Kestrel dashboard) and `EXPOSE`s port 8080.
+A root `Dockerfile` builds a multi-stage, framework-dependent image. The runtime stage uses `mcr.microsoft.com/dotnet/aspnet:10.0` (the ASP.NET Core shared framework is required for the Kestrel dashboard) and `EXPOSE`s port 8080. The Dockerfile clears the base image's `ASPNETCORE_HTTP_PORTS` default because `Program.cs` binds Kestrel explicitly (`ConfigureKestrel(o => o.ListenAnyIP(DashboardOptions.Port))`); the bound port is logged at startup (`Dashboard listening on http://*:<port>`). If `DashboardOptions__Port` is changed, the published `-p` mapping and `EXPOSE` must change to match, or the dashboard is unreachable.
 
 ```powershell
 docker build -t alfenhub:test .                        # build image locally (linux/amd64)

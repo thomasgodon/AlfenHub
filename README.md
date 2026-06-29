@@ -46,7 +46,15 @@ empty-host defaults). Variables map to config keys using .NET's `__` section sep
 | `AlfenModbusOptions__Port` | Modbus TCP port | `502` |
 | `KnxOptions__Enabled` | Enable KNX bridging | `true` |
 | `KnxOptions__Host` | KNX/IP gateway IP | `192.168.0.16` |
+| `DashboardOptions__Enabled` | Serve the read-only web dashboard | `true` (default) |
+| `DashboardOptions__Port` | Dashboard listen port | `8080` (default) |
 | `DOTNET_ENVIRONMENT` | Hosting environment | `Production` (default) |
+
+> The dashboard listens on `DashboardOptions__Port` (logged at startup as
+> `Dashboard listening on http://*:<port>`). If you change it, update the published `-p`
+> mapping (`docker run`) / `ports` (compose) and the `EXPOSE` to match — otherwise the
+> container listens on one port while traffic is forwarded to another and the dashboard
+> won't be reachable.
 
 ```bash
 docker run -d --name alfenhub \

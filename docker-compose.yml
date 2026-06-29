@@ -9,6 +9,8 @@ services:
     container_name: alfenhub
     restart: unless-stopped
     # Read-only web dashboard (set DashboardOptions__Enabled=false to disable; then drop this mapping).
+    # Both sides of the mapping must equal DashboardOptions__Port below (and Dockerfile EXPOSE);
+    # change them together, or the dashboard won't be reachable.
     ports:
       - "8080:8080"
     environment:
