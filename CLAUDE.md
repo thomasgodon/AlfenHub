@@ -50,7 +50,7 @@ Four projects plus tests, wired in `Program.cs` (`WebApplication.CreateBuilder`)
 ### Data flow (charger → KNX)
 
 1. `Worker.ExecuteAsync` runs `ChargerPollingService.RunAsync` — a single long-lived loop (`ChargerPollingOptions.PollInterval`, ~1s).
-2. Each tick: re-apply any pending setpoints via `IChargerGateway.WriteMaxCurrentAsync`, then read a fresh `Charger` snapshot via `IChargerGateway.GetAsync` (the `AlfenModbusGateway` reconnects lazily).
+2. Each tick: re-apply any pending setpoints via `IChargerGateway.WriteMaxCurrentAsync`, then read a fresh `Charger` snapshot via `IChargerGateway.GetAsync` (the `AlfenModbusGateway` reconnects lazily). Modbus I/O goes through `AlfenModbusGateway.InvokeAsync`, which on a transport-level failure (`TimeoutException`/`IOException`/`SocketException`) disconnects the client so the next tick reconnects from scratch — FluentModbus keeps `IsConnected == true` on a half-open socket, so without this a single timeout would otherwise wedge the loop into timing out forever. `ModbusException` (a valid protocol response) is left uncaught. The thrown exception is still logged by the polling loop.
 3. Building the `Charger` raises a `ChargerStateRefreshed` domain event; `MediatRDomainEventDispatcher` publishes it as a `ChargerStateRefreshedNotification`.
 4. `ChargerStateRefreshedNotificationHandler` receives it; if `IBuildingBus.IsEnabled`, `KnxBuildingBus` diffs the readings against its buffer and sends only **changed** values to the bus.
 

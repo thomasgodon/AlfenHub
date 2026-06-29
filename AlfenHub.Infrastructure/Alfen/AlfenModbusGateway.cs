@@ -102,11 +102,11 @@ internal sealed class AlfenModbusGateway : IChargerGateway, IDisposable
         while (offset < count)
         {
             var chunk = Math.Min(maxRegistersPerRequest, count - offset);
-            var data = (await _modbusClient.ReadHoldingRegistersAsync<ushort>(
+            var data = (await InvokeAsync(() => _modbusClient.ReadHoldingRegistersAsync<ushort>(
                 unitIdentifier: slaveAddress,
                 startingAddress: startAddress + offset,
                 count: chunk,
-                cancellationToken)).ToArray();
+                cancellationToken))).ToArray();
 
             Array.Copy(data, 0, result, offset, chunk);
             offset += chunk;
@@ -119,11 +119,58 @@ internal sealed class AlfenModbusGateway : IChargerGateway, IDisposable
     {
         await EnsureConnectedAsync(cancellationToken);
 
-        await _modbusClient.WriteMultipleRegistersAsync(
+        await InvokeAsync(() => _modbusClient.WriteMultipleRegistersAsync(
             unitIdentifier: socketId.Value,
             startingAddress: AlfenModbusConstants.ModbusSlaveMaxCurrentRegister,
             dataset: maxCurrent.Amperes.ToUshortArray(),
-            cancellationToken);
+            cancellationToken));
+    }
+
+    /// <summary>
+    /// Runs a Modbus I/O operation and, on a transport-level failure, drops the connection so the
+    /// next poll cycle reconnects from scratch. After a timeout (or a half-open socket / network
+    /// blip) FluentModbus still reports <c>IsConnected == true</c>, so without this
+    /// <see cref="EnsureConnectedAsync"/> would never reconnect and every subsequent transaction
+    /// would keep timing out. <see cref="ModbusException"/> is deliberately not caught — it is a
+    /// valid protocol response on a healthy connection, so disconnecting on it would only churn.
+    /// The exception is rethrown so the polling loop logs it.
+    /// </summary>
+    private async Task<T> InvokeAsync<T>(Func<Task<T>> operation)
+    {
+        try
+        {
+            return await operation();
+        }
+        catch (Exception e) when (e is TimeoutException or IOException or System.Net.Sockets.SocketException)
+        {
+            Disconnect();
+            throw;
+        }
+    }
+
+    private async Task InvokeAsync(Func<Task> operation)
+    {
+        try
+        {
+            await operation();
+        }
+        catch (Exception e) when (e is TimeoutException or IOException or System.Net.Sockets.SocketException)
+        {
+            Disconnect();
+            throw;
+        }
+    }
+
+    private void Disconnect()
+    {
+        try
+        {
+            _modbusClient.Disconnect();
+        }
+        catch (Exception e)
+        {
+            _logger.LogDebug(e, "Error while disconnecting the Modbus client");
+        }
     }
 
     private static Charger MapCharger(
