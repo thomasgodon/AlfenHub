@@ -20,7 +20,7 @@ namespace AlfenHub.Infrastructure.Alfen;
 /// </summary>
 internal sealed class AlfenModbusGateway : IChargerGateway, IDisposable
 {
-    private readonly ModbusTcpClient _modbusClient = new();
+    private ModbusTcpClient _modbusClient = CreateClient();
     private readonly AlfenModbusOptions _options;
     private readonly ILogger<AlfenModbusGateway> _logger;
     private IPEndPoint? _endPoint;
@@ -29,8 +29,9 @@ internal sealed class AlfenModbusGateway : IChargerGateway, IDisposable
     {
         _options = options.Value;
         _logger = logger;
-        _modbusClient.ReadTimeout = 1000;
     }
+
+    private static ModbusTcpClient CreateClient() => new() { ReadTimeout = 1000 };
 
     public async Task<Charger> GetAsync(CancellationToken cancellationToken)
     {
@@ -127,13 +128,18 @@ internal sealed class AlfenModbusGateway : IChargerGateway, IDisposable
     }
 
     /// <summary>
-    /// Runs a Modbus I/O operation and, on a transport-level failure, drops the connection so the
-    /// next poll cycle reconnects from scratch. After a timeout (or a half-open socket / network
-    /// blip) FluentModbus still reports <c>IsConnected == true</c>, so without this
-    /// <see cref="EnsureConnectedAsync"/> would never reconnect and every subsequent transaction
-    /// would keep timing out. <see cref="ModbusException"/> is deliberately not caught — it is a
-    /// valid protocol response on a healthy connection, so disconnecting on it would only churn.
-    /// The exception is rethrown so the polling loop logs it.
+    /// Runs a Modbus I/O operation and, on a transport-level failure, tears the client down and
+    /// replaces it with a fresh one so the next poll cycle reconnects from scratch. Merely calling
+    /// <c>Disconnect()</c> is not enough: after a forced close FluentModbus's <c>IsConnected</c>
+    /// (which reads the disposed socket's <c>Connected</c>) can report a stale <c>true</c>, so
+    /// <see cref="EnsureConnectedAsync"/> would short-circuit and never reconnect — leaving every
+    /// subsequent transaction hitting the disposed <c>NetworkStream</c> with
+    /// <see cref="ObjectDisposedException"/>. A brand-new <see cref="ModbusTcpClient"/> reports
+    /// <c>IsConnected == false</c> unambiguously, guaranteeing the reconnect. We also treat
+    /// <see cref="ObjectDisposedException"/> and <see cref="InvalidOperationException"/> (FluentModbus's
+    /// "TCP connection was closed unexpectedly") as transport faults. <see cref="ModbusException"/> is
+    /// deliberately not caught — it is a valid protocol response on a healthy connection, so resetting
+    /// on it would only churn. The exception is rethrown so the polling loop logs it.
     /// </summary>
     private async Task<T> InvokeAsync<T>(Func<Task<T>> operation)
     {
@@ -141,9 +147,9 @@ internal sealed class AlfenModbusGateway : IChargerGateway, IDisposable
         {
             return await operation();
         }
-        catch (Exception e) when (e is TimeoutException or IOException or System.Net.Sockets.SocketException)
+        catch (Exception e) when (e is TimeoutException or IOException or System.Net.Sockets.SocketException or ObjectDisposedException or InvalidOperationException)
         {
-            Disconnect();
+            ResetClient();
             throw;
         }
     }
@@ -154,23 +160,25 @@ internal sealed class AlfenModbusGateway : IChargerGateway, IDisposable
         {
             await operation();
         }
-        catch (Exception e) when (e is TimeoutException or IOException or System.Net.Sockets.SocketException)
+        catch (Exception e) when (e is TimeoutException or IOException or System.Net.Sockets.SocketException or ObjectDisposedException or InvalidOperationException)
         {
-            Disconnect();
+            ResetClient();
             throw;
         }
     }
 
-    private void Disconnect()
+    private void ResetClient()
     {
         try
         {
-            _modbusClient.Disconnect();
+            _modbusClient.Dispose();
         }
         catch (Exception e)
         {
-            _logger.LogDebug(e, "Error while disconnecting the Modbus client");
+            _logger.LogDebug(e, "Error while disposing the faulted Modbus client");
         }
+
+        _modbusClient = CreateClient();
     }
 
     private static Charger MapCharger(
