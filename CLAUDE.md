@@ -66,7 +66,7 @@ Four projects plus tests, wired in `Program.cs` (`WebApplication.CreateBuilder`)
 ### Data flow (KNX → charger)
 
 1. `KnxBuildingBus` subscribes to `GroupMessageReceived` on the KNX bus (on first connect).
-2. `ValueRead` → answered directly from its own buffer (no MediatR round-trip). `ValueWrite` → mapped to a capability string.
+2. `ValueRead` → answered directly from its own buffer (no MediatR round-trip) with a proper **`GroupValue_Response`** (`RespondGroupValueAsync`), not a spontaneous `GroupValue_Write`. `ValueWrite` → mapped to a capability string.
 3. For `Socket1.SlaveMaxCurrent`, it decodes the float (reversing byte order) and sends a `SetSocketMaxCurrentCommand` via MediatR `ISender`.
 4. `SetSocketMaxCurrentCommandHandler` stores the setpoint in `IChargerControlBuffer`. The polling loop re-asserts it to register 1210 on every tick.
 

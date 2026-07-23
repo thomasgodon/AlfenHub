@@ -61,7 +61,7 @@ internal sealed class KnxBuildingBus : IBuildingBus
         }
 
         var changedValues = UpdateBuffer(charger);
-        await SendValuesAsync(changedValues, cancellationToken);
+        await SendValuesAsync(changedValues, asResponse: false, cancellationToken);
     }
 
     private List<KnxValue> UpdateBuffer(Charger charger)
@@ -91,7 +91,7 @@ internal sealed class KnxBuildingBus : IBuildingBus
         return knxValue;
     }
 
-    private async Task SendValuesAsync(IEnumerable<KnxValue> values, CancellationToken cancellationToken)
+    private async Task SendValuesAsync(IEnumerable<KnxValue> values, bool asResponse, CancellationToken cancellationToken)
     {
         if (_bus?.ConnectionState != BusConnectionState.Connected)
         {
@@ -113,13 +113,17 @@ internal sealed class KnxBuildingBus : IBuildingBus
 
             var writeCancellationToken = new CancellationTokenSource();
 
+            // KnxReadingEncoder already produces wire-order (big-endian) DPT bytes.
+            var value = new GroupValue(knxValue.Value);
+
+            // Answering a GroupValueRead must be an A_GroupValue_Response; a spontaneous publish is an
+            // A_GroupValue_Write. A requester waiting for a Response can retransmit / time out otherwise.
+            var sendTask = asResponse
+                ? _bus.RespondGroupValueAsync(knxValue.Address, value, MessagePriority.Low, writeCancellationToken.Token)
+                : _bus.WriteGroupValueAsync(knxValue.Address, value, MessagePriority.Low, writeCancellationToken.Token);
+
             await Task.WhenAny(
-                _bus.WriteGroupValueAsync(
-                    knxValue.Address,
-                    // KnxReadingEncoder already produces wire-order (big-endian) DPT bytes.
-                    new GroupValue(knxValue.Value),
-                    MessagePriority.Low,
-                    writeCancellationToken.Token),
+                sendTask,
                 Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken));
 
             await writeCancellationToken.CancelAsync();
@@ -172,7 +176,7 @@ internal sealed class KnxBuildingBus : IBuildingBus
                     return;
                 }
 
-                await SendValuesAsync([bufferedValue], cancellationToken);
+                await SendValuesAsync([bufferedValue], asResponse: true, cancellationToken);
                 return;
 
             case GroupEventType.ValueWrite:
