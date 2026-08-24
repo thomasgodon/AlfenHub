@@ -38,7 +38,7 @@ internal static class KnxDpt
         return [(byte)((v >> 8) & 0xFF), (byte)(v & 0xFF)];
     }
 
-    /// <summary>DPT 13.xxx — 4-byte signed, big-endian (used for durations in seconds).</summary>
+    /// <summary>DPT 13.xxx — 4-byte signed, big-endian (durations in seconds; energies in Wh / VAh / VARh).</summary>
     public static byte[] Int32(long value)
     {
         var bytes = BitConverter.GetBytes((int)Math.Clamp(value, int.MinValue, int.MaxValue));

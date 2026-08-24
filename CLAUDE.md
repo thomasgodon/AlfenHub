@@ -78,7 +78,7 @@ Both directions key on dotted **capability strings** — the contract between ch
 
 - In `appsettings.json` under `KnxOptions.ReadGroupAddresses` / `WriteGroupAddresses`, each capability maps to a KNX group address. **An empty group address means that capability is skipped** (see `KnxOptionsExtensions.GetReadGroupAddressesFromOptions`). The committed file lists every capability with an empty address.
 - Capability suffixes live in `KnxCapabilities` (`StationNames` / `SocketNames`, with `ForStation`/`ForSocket` builders); `KnxReadingEncoder.Encode` emits the station block then every socket. The only **writable** capability is `Socket1.SlaveMaxCurrent`.
-- `KnxReadingEncoder` produces **wire-order (big-endian) DPT payloads** via `KnxDpt`: DPT 14 (4-byte float) for analog values, energies as DPT 14 in kWh, 1-byte (DPT 5) for counts/enums/booleans, DPT 13 (4-byte signed) seconds for durations, DPT 8 for the time-zone offset and DPT 19 for the station clock. `KnxBuildingBus.SendValuesAsync` writes these bytes verbatim (no byte reversal); inbound writes still reverse to decode the float.
+- `KnxReadingEncoder` produces **wire-order (big-endian) DPT payloads** via `KnxDpt`: DPT 14 (4-byte float) for analog values, energies as DPT 13 (4-byte signed) in their KNX base units (Wh / VAh / VARh — matching Home Assistant's `active_energy` / `apparent_energy` / `reactive_energy` types), 1-byte (DPT 5) for counts/enums/booleans, DPT 13 (4-byte signed) seconds for durations, DPT 8 for the time-zone offset and DPT 19 for the station clock. `KnxBuildingBus.SendValuesAsync` writes these bytes verbatim (no byte reversal); inbound writes still reverse to decode the float.
 
 ### Modbus register decoding
 

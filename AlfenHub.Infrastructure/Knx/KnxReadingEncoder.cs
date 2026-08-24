@@ -10,8 +10,9 @@ using StationNames = KnxCapabilities.StationNames;
 /// (big-endian) DPT payloads via <see cref="KnxDpt"/>; the building bus sends them verbatim. Kept as
 /// a separate pure function so the encoding can be unit-tested without a live KNX connection.
 /// <para>
-/// Analog quantities are DPT 14 (4-byte float); energies are DPT 14 in kWh (preserves decimals);
-/// counts/enums are 1-byte (DPT 5); durations are DPT 13 seconds; the station clock is DPT 19.
+/// Analog quantities are DPT 14 (4-byte float); energies are DPT 13 (4-byte signed) in their base
+/// units (Wh / VAh / VARh); counts/enums are 1-byte (DPT 5); durations are DPT 13 seconds; the
+/// station clock is DPT 19.
 /// Identity strings are intentionally not exposed to KNX (dashboard only).
 /// </para>
 /// </summary>
@@ -48,8 +49,8 @@ internal static class KnxReadingEncoder
 
         (string, byte[]) For(string name, byte[] value) => (KnxCapabilities.ForSocket(id, name), value);
 
-        // Energy values are converted Wh -> kWh so the float keeps useful precision.
-        static byte[] Kwh(double wattHours) => KnxDpt.Float((float)(wattHours / 1000.0));
+        // Energy values are sent as DPT 13 (4-byte signed) in their KNX base units: Wh / VAh / VARh.
+        static byte[] Wh(double wattHours) => KnxDpt.Int32((long)wattHours);
 
         yield return For(Names.MeterState, KnxDpt.Byte(energy.MeterState));
         yield return For(Names.MeterType, KnxDpt.Byte((int)energy.MeterType));
@@ -90,25 +91,25 @@ internal static class KnxReadingEncoder
         yield return For(Names.ReactivePowerL3, KnxDpt.Float(energy.ReactivePowerL3.Watts));
         yield return For(Names.ReactivePowerSum, KnxDpt.Float(energy.ReactivePowerSum.Watts));
 
-        yield return For(Names.RealEnergyDeliveredL1, Kwh(energy.RealEnergyDeliveredL1.WattHours));
-        yield return For(Names.RealEnergyDeliveredL2, Kwh(energy.RealEnergyDeliveredL2.WattHours));
-        yield return For(Names.RealEnergyDeliveredL3, Kwh(energy.RealEnergyDeliveredL3.WattHours));
-        yield return For(Names.RealEnergyDeliveredSum, Kwh(energy.RealEnergyDeliveredSum.WattHours));
+        yield return For(Names.RealEnergyDeliveredL1, Wh(energy.RealEnergyDeliveredL1.WattHours));
+        yield return For(Names.RealEnergyDeliveredL2, Wh(energy.RealEnergyDeliveredL2.WattHours));
+        yield return For(Names.RealEnergyDeliveredL3, Wh(energy.RealEnergyDeliveredL3.WattHours));
+        yield return For(Names.RealEnergyDeliveredSum, Wh(energy.RealEnergyDeliveredSum.WattHours));
 
-        yield return For(Names.RealEnergyConsumedL1, Kwh(energy.RealEnergyConsumedL1.WattHours));
-        yield return For(Names.RealEnergyConsumedL2, Kwh(energy.RealEnergyConsumedL2.WattHours));
-        yield return For(Names.RealEnergyConsumedL3, Kwh(energy.RealEnergyConsumedL3.WattHours));
-        yield return For(Names.RealEnergyConsumedSum, Kwh(energy.RealEnergyConsumedSum.WattHours));
+        yield return For(Names.RealEnergyConsumedL1, Wh(energy.RealEnergyConsumedL1.WattHours));
+        yield return For(Names.RealEnergyConsumedL2, Wh(energy.RealEnergyConsumedL2.WattHours));
+        yield return For(Names.RealEnergyConsumedL3, Wh(energy.RealEnergyConsumedL3.WattHours));
+        yield return For(Names.RealEnergyConsumedSum, Wh(energy.RealEnergyConsumedSum.WattHours));
 
-        yield return For(Names.ApparentEnergyL1, Kwh(energy.ApparentEnergyL1.WattHours));
-        yield return For(Names.ApparentEnergyL2, Kwh(energy.ApparentEnergyL2.WattHours));
-        yield return For(Names.ApparentEnergyL3, Kwh(energy.ApparentEnergyL3.WattHours));
-        yield return For(Names.ApparentEnergySum, Kwh(energy.ApparentEnergySum.WattHours));
+        yield return For(Names.ApparentEnergyL1, Wh(energy.ApparentEnergyL1.WattHours));
+        yield return For(Names.ApparentEnergyL2, Wh(energy.ApparentEnergyL2.WattHours));
+        yield return For(Names.ApparentEnergyL3, Wh(energy.ApparentEnergyL3.WattHours));
+        yield return For(Names.ApparentEnergySum, Wh(energy.ApparentEnergySum.WattHours));
 
-        yield return For(Names.ReactiveEnergyL1, Kwh(energy.ReactiveEnergyL1.WattHours));
-        yield return For(Names.ReactiveEnergyL2, Kwh(energy.ReactiveEnergyL2.WattHours));
-        yield return For(Names.ReactiveEnergyL3, Kwh(energy.ReactiveEnergyL3.WattHours));
-        yield return For(Names.ReactiveEnergySum, Kwh(energy.ReactiveEnergySum.WattHours));
+        yield return For(Names.ReactiveEnergyL1, Wh(energy.ReactiveEnergyL1.WattHours));
+        yield return For(Names.ReactiveEnergyL2, Wh(energy.ReactiveEnergyL2.WattHours));
+        yield return For(Names.ReactiveEnergyL3, Wh(energy.ReactiveEnergyL3.WattHours));
+        yield return For(Names.ReactiveEnergySum, Wh(energy.ReactiveEnergySum.WattHours));
 
         yield return For(Names.Availability, KnxDpt.Byte(status.Availability));
         yield return For(Names.Mode3State, KnxDpt.Byte((int)status.Mode3State));

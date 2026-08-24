@@ -23,6 +23,17 @@ public class KnxReadingEncoderTests
         return bytes;
     }
 
+    private static byte[] BigEndianInt32(int value)
+    {
+        var bytes = BitConverter.GetBytes(value);
+        if (BitConverter.IsLittleEndian)
+        {
+            Array.Reverse(bytes);
+        }
+
+        return bytes;
+    }
+
     [Fact]
     public void Encode_ProducesStationAndAllSocketCapabilities()
     {
@@ -71,13 +82,15 @@ public class KnxReadingEncoderTests
     }
 
     [Fact]
-    public void Encode_EncodesEnergyAsFloatKilowattHours()
+    public void Encode_EncodesEnergyAsBigEndianWattHours()
     {
         var charger = ChargerFactory.CreateSingleSocket(realEnergyDelivered: 1234d);
 
         var values = KnxReadingEncoder.Encode(charger).ToDictionary(r => r.Capability, r => r.Value);
 
-        Assert.Equal(BigEndianFloat(1.234f), values["Socket1.RealEnergyDeliveredSum"]);
+        // DPT 13.010: 4-byte signed, Wh - not scaled to kWh.
+        Assert.Equal(BigEndianInt32(1234), values["Socket1.RealEnergyDeliveredSum"]);
+        Assert.Equal(new byte[] { 0x00, 0x00, 0x04, 0xD2 }, values["Socket1.RealEnergyDeliveredSum"]);
     }
 
     [Fact]
