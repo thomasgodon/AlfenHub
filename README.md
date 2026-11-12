@@ -83,6 +83,14 @@ instead, uncomment the `build` block (and comment out `image`) in the compose fi
 
 ## Releasing
 
-Publishing a GitHub release triggers `.github/workflows/release.yml`, which builds the
-Docker image and pushes it to `ghcr.io/thomasgodon/alfenhub` tagged with the release
-version and `latest`.
+`.github/workflows/docker.yml` builds the Docker image and pushes it to
+`ghcr.io/thomasgodon/alfenhub`:
+
+| Trigger | Tags |
+|---|---|
+| Push to `main` with code changes (source projects, `AlfenHub.sln`, `Dockerfile`, `.dockerignore`) | `unstable` |
+| Manual run (`workflow_dispatch`) | `unstable` |
+| Published GitHub release | release version + `latest` |
+
+Changes to tests, docs or CI config alone do not build an image. To run the bleeding-edge
+build, pull `ghcr.io/thomasgodon/alfenhub:unstable`.

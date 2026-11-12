@@ -1,9 +1,29 @@
 name: Build and publish Docker image
 
+# Tagging:
+#   push to main (code changes only)  -> :unstable
+#   workflow_dispatch                 -> :unstable
+#   published GitHub release          -> :<semver> + :latest
 on:
+  push:
+    branches: [main]
+    # Only paths that end up in the image. Tests, docs and CI config do not trigger a build.
+    paths:
+      - 'AlfenHub/**'
+      - 'AlfenHub.Domain/**'
+      - 'AlfenHub.Application/**'
+      - 'AlfenHub.Infrastructure/**'
+      - 'AlfenHub.sln'
+      - 'Dockerfile'
+      - '.dockerignore'
   release:
     types: [published]
   workflow_dispatch:
+
+# A newer push to main supersedes an in-flight unstable build; release builds never cancel.
+concurrency:
+  group: docker-${{ github.event_name == 'release' && github.ref || 'unstable' }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
 
 env:
   REGISTRY: ghcr.io
@@ -36,8 +56,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern={{version}}
-            type=raw,value=latest
+            type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }}
+            type=raw,value=latest,enable=${{ github.event_name == 'release' }}
+            type=raw,value=unstable,enable=${{ github.event_name != 'release' }}
 
       - name: Build and push
         uses: docker/build-push-action@v6

@@ -34,7 +34,11 @@ docker run --rm -p 8080:8080 -e AlfenModbusOptions__Host=192.168.0.19 alfenhub:t
 
 Config is overridden at runtime via environment variables using .NET's `__` section separator (e.g. `AlfenModbusOptions__Host`, `KnxOptions__Host`, `DashboardOptions__Port`). No real hosts/secrets are baked into the image — `appsettings.development.json` is excluded via `.dockerignore`, and `DOTNET_ENVIRONMENT` defaults to `Production`.
 
-`.github/workflows/release.yml` builds and pushes the image to GHCR (`ghcr.io/thomasgodon/alfenhub`) whenever a GitHub **release** is published (also runnable via `workflow_dispatch`). It tags the image with the release semver + `latest`, authenticating with the built-in `GITHUB_TOKEN` (no extra secrets).
+`.github/workflows/docker.yml` builds and pushes the image to GHCR (`ghcr.io/thomasgodon/alfenhub`), authenticating with the built-in `GITHUB_TOKEN` (no extra secrets). Tagging depends on the trigger:
+
+- **Push to `main`** touching image-relevant paths (the four source projects, `AlfenHub.sln`, `Dockerfile`, `.dockerignore`) → `:unstable`. Changes to tests, docs or CI config alone do not build. A new source project must be added to the workflow's `paths` list.
+- **`workflow_dispatch`** → `:unstable`.
+- **Published GitHub release** → `:<semver>` + `:latest`. `latest` is only ever moved by a release.
 
 Configuration lives in `AlfenHub/appsettings.json` (committed defaults, empty hosts) and `appsettings.development.json` (local overrides, gitignored values). Both are copied to output on build. Environment is selected via `DOTNET_ENVIRONMENT` (`development` set in `launchSettings.json`).
 
