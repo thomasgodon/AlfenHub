@@ -69,10 +69,12 @@ Four projects plus tests, wired in `Program.cs` (`WebApplication.CreateBuilder`)
 
 ### Data flow (KNX → charger)
 
-1. `KnxBuildingBus` subscribes to `GroupMessageReceived` on the KNX bus (on first connect).
+1. `KnxBuildingBus` subscribes to `GroupMessageReceived` on the KNX bus (on every (re)connect; a stale bus is unsubscribed and disposed before it is replaced).
 2. `ValueRead` → answered directly from its own buffer (no MediatR round-trip) with a proper **`GroupValue_Response`** (`RespondGroupValueAsync`), not a spontaneous `GroupValue_Write`. `ValueWrite` → mapped to a capability string.
 3. For `Socket1.SlaveMaxCurrent`, it decodes the float (reversing byte order) and sends a `SetSocketMaxCurrentCommand` via MediatR `ISender`.
 4. `SetSocketMaxCurrentCommandHandler` stores the setpoint in `IChargerControlBuffer`. The polling loop re-asserts it to register 1210 on every tick.
+
+**Shutdown:** `KnxBuildingBus` is `IAsyncDisposable`; the DI container disposes it on host shutdown (after the hosted `Worker` has stopped — `Program.cs` uses `await app.RunAsync()`, which disposes the container asynchronously). `DisposeAsync` cancels inbound message handling, unsubscribes, and disposes the Falcon `KnxBus`, which closes the tunnel so the KNX/IP interface frees its tunnel slot immediately. The close is bounded by a 5 s timeout and never throws. Keep it async-only: a synchronous container dispose would throw for an `IAsyncDisposable`-only singleton.
 
 The **`IChargerControlBuffer`** replaces the old `AlfenModbusClient.SocketWritableData` shared-mutable singleton. It **retains** the latest setpoint per socket (rather than draining it) because an Alfen charger falls back to its safe current once the Modbus max-current validity time elapses, so the loop must re-write it each cycle.
 

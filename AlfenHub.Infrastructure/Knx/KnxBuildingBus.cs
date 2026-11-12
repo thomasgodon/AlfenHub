@@ -20,9 +20,16 @@ namespace AlfenHub.Infrastructure.Knx;
 /// answered from the buffer; a <c>ValueWrite</c> is translated into a
 /// <see cref="SetSocketMaxCurrentCommand"/> dispatched via MediatR.
 /// </para>
+/// <para>
+/// Disposed by the DI container on host shutdown (after the polling worker has stopped):
+/// <see cref="DisposeAsync"/> closes the tunnelling connection so the KNX/IP interface frees its
+/// tunnel slot immediately instead of holding it until its heartbeat times out.
+/// </para>
 /// </summary>
-internal sealed class KnxBuildingBus : IBuildingBus
+internal sealed class KnxBuildingBus : IBuildingBus, IAsyncDisposable
 {
+    private static readonly TimeSpan CloseTimeout = TimeSpan.FromSeconds(5);
+
     private readonly ILogger<KnxBuildingBus> _logger;
     private readonly ISender _sender;
     private readonly KnxOptions _options;
@@ -32,7 +39,11 @@ internal sealed class KnxBuildingBus : IBuildingBus
     private readonly Dictionary<GroupAddress, string> _writeGroupAddressCapabilityMapping;
     private readonly object _bufferLock = new();
 
+    // Cancelled on dispose; scopes the inbound (bus → charger) message handling.
+    private readonly CancellationTokenSource _shutdown = new();
+
     private KnxBus? _bus;
+    private int _disposed;
 
     public KnxBuildingBus(ILogger<KnxBuildingBus> logger, ISender sender, IOptions<KnxOptions> options)
     {
@@ -98,7 +109,9 @@ internal sealed class KnxBuildingBus : IBuildingBus
             await EnsureConnectedAsync(cancellationToken);
         }
 
-        if (_bus is null)
+        // Local copy: DisposeAsync may clear the field concurrently.
+        var bus = _bus;
+        if (bus is null)
         {
             _logger.LogError("Something went wrong after connecting to knx client");
             return;
@@ -111,7 +124,7 @@ internal sealed class KnxBuildingBus : IBuildingBus
                 continue;
             }
 
-            var writeCancellationToken = new CancellationTokenSource();
+            using var writeCancellationToken = new CancellationTokenSource();
 
             // KnxReadingEncoder already produces wire-order (big-endian) DPT bytes.
             var value = new GroupValue(knxValue.Value);
@@ -119,8 +132,8 @@ internal sealed class KnxBuildingBus : IBuildingBus
             // Answering a GroupValueRead must be an A_GroupValue_Response; a spontaneous publish is an
             // A_GroupValue_Write. A requester waiting for a Response can retransmit / time out otherwise.
             var sendTask = asResponse
-                ? _bus.RespondGroupValueAsync(knxValue.Address, value, MessagePriority.Low, writeCancellationToken.Token)
-                : _bus.WriteGroupValueAsync(knxValue.Address, value, MessagePriority.Low, writeCancellationToken.Token);
+                ? bus.RespondGroupValueAsync(knxValue.Address, value, MessagePriority.Low, writeCancellationToken.Token)
+                : bus.WriteGroupValueAsync(knxValue.Address, value, MessagePriority.Low, writeCancellationToken.Token);
 
             await Task.WhenAny(
                 sendTask,
@@ -132,26 +145,104 @@ internal sealed class KnxBuildingBus : IBuildingBus
 
     private async Task EnsureConnectedAsync(CancellationToken cancellationToken)
     {
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) == 1, this);
+
         if (_bus?.ConnectionState == BusConnectionState.Connected)
         {
             return;
         }
 
-        _bus = new KnxBus(new IpTunnelingConnectorParameters(_options.Host, _options.Port));
-        _bus.GroupMessageReceived += async (_, args) =>
+        // Release a previous (dropped / never-connected) bus before replacing it, otherwise its
+        // socket and event subscription leak on every reconnect.
+        var stale = Interlocked.Exchange(ref _bus, null);
+        if (stale is not null)
         {
-            await ProcessGroupMessageReceivedAsync(args, cancellationToken);
-        };
+            await CloseBusAsync(stale);
+        }
 
-        await _bus.ConnectAsync(cancellationToken);
+        var bus = new KnxBus(new IpTunnelingConnectorParameters(_options.Host, _options.Port));
+        bus.GroupMessageReceived += OnGroupMessageReceived;
+        _bus = bus;
 
-        if (_bus.ConnectionState == BusConnectionState.Connected)
+        // Disposed while we were closing the stale bus: don't leave a fresh connection behind.
+        if (Volatile.Read(ref _disposed) == 1)
+        {
+            if (Interlocked.CompareExchange(ref _bus, null, bus) == bus)
+            {
+                await CloseBusAsync(bus);
+            }
+
+            throw new ObjectDisposedException(nameof(KnxBuildingBus));
+        }
+
+        await bus.ConnectAsync(cancellationToken);
+
+        if (bus.ConnectionState == BusConnectionState.Connected)
         {
             _logger.LogInformation("Connected to {Host} at port: {Port}", _options.Host, _options.Port);
         }
         else
         {
             _logger.LogError("Something went wrong when trying to connect to {Host} at port: {Port}", _options.Host, _options.Port);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) == 1)
+        {
+            return;
+        }
+
+        await _shutdown.CancelAsync();
+
+        var bus = Interlocked.Exchange(ref _bus, null);
+        if (bus is not null)
+        {
+            await CloseBusAsync(bus);
+            _logger.LogInformation("Disconnected from {Host} at port: {Port}", _options.Host, _options.Port);
+        }
+
+        _shutdown.Dispose();
+    }
+
+    /// <summary>
+    /// Unsubscribes and disposes a bus; disposing closes the tunnel (DISCONNECT_REQUEST). Bounded by
+    /// <see cref="CloseTimeout"/> so an unreachable interface cannot stall shutdown, and never throws.
+    /// </summary>
+    private async Task CloseBusAsync(KnxBus bus)
+    {
+        bus.GroupMessageReceived -= OnGroupMessageReceived;
+
+        try
+        {
+            await bus.DisposeAsync().AsTask().WaitAsync(CloseTimeout);
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "Could not cleanly close the KNX connection to {Host}", _options.Host);
+        }
+    }
+
+    // async void event handler: must not let an exception escape (it would crash the process).
+    private async void OnGroupMessageReceived(object? sender, GroupEventArgs e)
+    {
+        try
+        {
+            if (Volatile.Read(ref _disposed) == 1)
+            {
+                return;
+            }
+
+            await ProcessGroupMessageReceivedAsync(e, _shutdown.Token);
+        }
+        catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException)
+        {
+            // Shutting down.
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "{Message}", ex.Message);
         }
     }
 
